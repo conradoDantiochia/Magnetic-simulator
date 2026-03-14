@@ -28,7 +28,7 @@ import { massSpectrometer, ELECTRON_CHARGE, PROTON_MASS } from '@/app/lib/physic
 //            always passes THROUGH the arrow rows visually.
 
 const SX1  = -11.7,  SX2 = -2.0   // selector x bounds
-const SHH  = 2.2                   // selector half-height
+const SHH  = 2.0                   // selector half-height (slightly lower plates)
 const CX2  = 6.5                   // chamber right edge
 const CHH  = 6.2                   // chamber half-height (tall plate)
 const RVIZ = 2.8                   // visual orbit radius
@@ -58,10 +58,11 @@ function makeBox(
 // Build a -Z arrow grid anchored on y=0 so the beam always passes through a row
 function makeFieldGrid(
   x1: number, x2: number, y1: number, y2: number,
-  color: number, arrowLen = 0.55
+  color: number, arrowLen = 0.55,
+  dir?: THREE.Vector3
 ): THREE.Group {
   const g = new THREE.Group()
-  const dir = new THREE.Vector3(0, 0, -1)
+  const fieldDir = (dir ?? new THREE.Vector3(0, 0, -1)).clone().normalize()
   // x positions
   const xs: number[] = []
   for (let x = x1 + STEP * 0.5; x < x2 - 0.05; x += STEP) xs.push(x)
@@ -72,7 +73,7 @@ function makeFieldGrid(
   for (const x of xs) {
     for (const y of ys) {
       if (y < y1 - 0.01 || y > y2 + 0.01) continue
-      g.add(createArrow(dir, new THREE.Vector3(x, y, 0.05), arrowLen, color, 0.30, 0.030))
+      g.add(createArrow(fieldDir, new THREE.Vector3(x, y, 0.05), arrowLen, color, 0.30, 0.030))
     }
   }
   return g
@@ -109,8 +110,11 @@ export default function MassSpectrometerSim() {
 
   const m    = mFac * PROTON_MASS
   const absQ = qFac * ELECTRON_CHARGE
-  const res  = massSpectrometer(E, Bsel, B0, m, absQ)
-  const dY   = qSign as number
+  // Para los cálculos analíticos usamos |B|; el signo se refleja solo en la dirección visual
+  const res  = massSpectrometer(E, Math.abs(Bsel), Math.abs(B0), m, absQ)
+  const B0Sign = (Math.sign(B0) || 1) as 1 | -1
+  // Sentido de la órbita en la cámara: depende de q y de B0
+  const dY   = (qSign * B0Sign) as 1 | -1
 
   // Conversión de unidades: 1 unidad Three.js = 0.1 m (10 cm)
   const SCALE = 0.1
@@ -119,7 +123,8 @@ export default function MassSpectrometerSim() {
   // Aceleración física en Three.js units/s²: convertir m/s² a Three.js units/s²
   const a_y_3js = (q / m) * (-E + vInitial * Bsel) / SCALE
   
-  const x_entry = SX1 - 2.0
+  // La partícula entra exactamente al inicio del selector (x = SX1)
+  const x_entry = SX1
   const total_x = SX2 - x_entry
   const total_time = total_x / (vInitial / SCALE)  // velocidad en Three.js units/s
   
@@ -148,6 +153,10 @@ export default function MassSpectrometerSim() {
         phase_max = t_choc / total_time
       }
     }
+
+  // Punto final efectivo dentro del selector (para trayectorias rectilíneas en 2D)
+  const targetX = choc ? x_entry + (vInitial / SCALE) * t_choc : SX2
+  const targetY = choc ? py_choc : 0.5 * a_y_3js * total_time * total_time
   }
 
   useEffect(() => {
@@ -188,25 +197,44 @@ export default function MassSpectrometerSim() {
     )
     bp.position.set(selCX, -(SHH - 0.09), 0); scene.add(bp)
 
-    // E arrows: full columns from top-plate to bottom-plate, one per STEP in x
+    // E arrows: full columns from top-plate to bottom-plate, many in x (brush-like)
     const eH = (SHH - 0.27) * 2 - 0.1
-    for (let x = SX1 + STEP * 0.5; x < SX2 - 0.1; x += STEP) {
+    const eStep = STEP * 0.5
+    const eDir = new THREE.Vector3(0, E >= 0 ? -1 : 1, 0)
+    const eStartY = E >= 0 ? SHH - 0.27 : -(SHH - 0.27)
+    for (let x = SX1 + eStep * 0.5; x < SX2 - 0.1; x += eStep) {
       scene.add(createArrow(
-        new THREE.Vector3(0, -1, 0),
-        new THREE.Vector3(x, SHH - 0.27, 0.06),
+        eDir,
+        new THREE.Vector3(x, eStartY, 0.06),
         eH, 0x2244bb, 0.18, 0.024
       ))
     }
-    const eL = makeSprite('𝐄 ↓', '#2244bb', 0.52)
+    // #region agent log
+    fetch('http://127.0.0.1:7896/ingest/bef4633f-2346-494c-956d-bae9d60a50e1',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','X-Debug-Session-Id':'9c72de'},
+      body:JSON.stringify({
+        sessionId:'9c72de',
+        runId:'pre-fix',
+        hypothesisId:'fields-direction',
+        location:'MassSpectrometerSim.tsx:selector-fields',
+        message:'Selector field directions',
+        data:{E,Bsel,eDirY:eDir.y,bSelSign:Bsel >= 0 ? -1 : 1},
+        timestamp:Date.now()
+      })
+    }).catch(()=>{});
+    // #endregion
+    const eL = makeSprite(E >= 0 ? '𝐄 ↓' : '𝐄 ↑', '#2244bb', 0.52)
     eL.position.set(SX1 + 0.5, 0.75, 0.5); scene.add(eL)
 
     const slL = makeSprite('Selector de velocidades', '#3366aa', 0.34)
     slL.position.set(selCX, -(SHH + 0.80), 0.5); scene.add(slL)
 
-    scene.add(makeFieldGrid(SX1 + 0.15, SX2 - 0.1, -SHH + 0.3, SHH - 0.3, 0x00aa55, 0.55))
+    const bSelDir = new THREE.Vector3(0, 0, Bsel >= 0 ? -1 : 1)
+    scene.add(makeFieldGrid(SX1 + 0.15, SX2 - 0.1, -SHH + 0.3, SHH - 0.3, 0x00aa55, 0.55, bSelDir))
     scene.add(createArrow(
-    new THREE.Vector3(0,0,-1), // sale de la pantalla
-    new THREE.Vector3(selCX, 0, 0.8), // centro del selector
+      bSelDir, // sale o entra de la pantalla según el signo de B
+      new THREE.Vector3(selCX, 0, 0.8), // centro del selector
       2.0,
       0x00aa55,
       0.35,
@@ -233,12 +261,13 @@ export default function MassSpectrometerSim() {
     scene.add(makeBox(camCX, 0, CX2 - SX2, CHH * 2, 0x020a14, 0.52, 0x1a3350))
 
     // chamber 
-    scene.add(makeFieldGrid(SX2 + 0.15, CX2 - 0.15, -CHH + 0.3, CHH - 0.3, 0x00ffaa, 0.52))
+    const b0Dir = new THREE.Vector3(0, 0, B0 >= 0 ? -1 : 1)
+    scene.add(makeFieldGrid(SX2 + 0.15, CX2 - 0.15, -CHH + 0.3, CHH - 0.3, 0x00ffaa, 0.52, b0Dir))
     const chamber = makeSprite('Camara de deflexion', '#224466', 0.38)
     chamber.position.set(camCX + 1.2, -(CHH - 0.10), 0.6); scene.add(chamber)
     
     scene.add(createArrow(
-      new THREE.Vector3(0,0,-1),
+      b0Dir,
       new THREE.Vector3(camCX, 0, 0.8),
       2.6,
       0x00ffaa,
@@ -252,7 +281,8 @@ export default function MassSpectrometerSim() {
       -CHH + 0.3,
       CHH - 0.3,
       0x00ffaa,
-      0.52
+      0.52,
+      b0Dir
     ))
 
     const b0Vec = makeSprite('𝐁₀', '#00ffaa', 0.48)
@@ -351,7 +381,7 @@ export default function MassSpectrometerSim() {
       lastT = now
       if (!ctx.paused) {
         phase += dt * 0.50
-      if (phase >= (choc ? phase_max + 0.1 : 2.06)) { phase = 0; trail.clear() }
+        if (phase >= (choc ? phase_max + 0.1 : 2.06)) { phase = 0; trail.clear() }
       }
 
       let px: number, py: number
@@ -359,12 +389,33 @@ export default function MassSpectrometerSim() {
       let fx = 0, fy = 0   // force direction (toward orbit center, normalized)
       const inChamber = !choc && phase > phase_max && phase < 2.06
 
+      // #region agent log
+      fetch('http://127.0.0.1:7896/ingest/bef4633f-2346-494c-956d-bae9d60a50e1',{
+        method:'POST',
+        headers:{'Content-Type':'application/json','X-Debug-Session-Id':'9c72de'},
+        body:JSON.stringify({
+          sessionId:'9c72de',
+          runId:'pre-fix',
+          hypothesisId:'selector-kinematics',
+          location:'MassSpectrometerSim.tsx:animate-selector',
+          message:'Selector kinematics step',
+          data:{E,Bsel,qSign,a_y_3js,x_entry,SX2,total_time,choc,t_choc,py_choc,phase,phase_max},
+          timestamp:Date.now()
+        })
+      }).catch(()=>{});
+      // #endregion
+
+      // Movimiento en el selector: cinematica 2D con E y B constantes
       if (phase <= phase_max) {
         const t = phase * total_time
-        px = x_entry + (vInitial / SCALE) * t
+        const vx_phys = (vInitial / SCALE)
+        const vy_phys = a_y_3js * t
+        px = x_entry + vx_phys * t
         py = 0.5 * a_y_3js * t * t
-        vx = 1; vy = 0   // straight right
-        fx = 0; fy = 0   // no net force (balanced in selector)
+        const vlen = Math.sqrt(vx_phys*vx_phys + vy_phys*vy_phys) || 1
+        vx = vx_phys / vlen
+        vy = vy_phys / vlen
+        fx = 0; fy = 0   // en el selector mostramos solo la trayectoria (fuerzas balanceadas o no)
       } else if (!choc) {
         const t = Math.min((phase - phase_max) * Math.PI / (2.06 - phase_max), Math.PI)
         ;[px, py] = orbitPos(t, dY)
@@ -377,11 +428,15 @@ export default function MassSpectrometerSim() {
         const flen = Math.sqrt(fcx*fcx + fcy*fcy)
         fx = fcx / flen; fy = fcy / flen
       } else {
-        // choc
+        // choc: partícula se estrella contra una placa en el selector
         const t = t_choc
-        px = x_entry + vInitial * t
+        const vx_phys = (vInitial / SCALE)
+        const vy_phys = a_y_3js * t
+        px = x_entry + vx_phys * t
         py = py_choc
-        vx = 1; vy = 0
+        const vlen = Math.sqrt(vx_phys*vx_phys + vy_phys*vy_phys) || 1
+        vx = vx_phys / vlen
+        vy = vy_phys / vlen
         fx = 0; fy = 0
       }
 
@@ -512,8 +567,8 @@ export default function MassSpectrometerSim() {
 
           {/* Selector */}
           <div style={{ fontSize: 10, fontFamily: 'monospace', color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 4 }}>Selector de velocidades</div>
-          <ParamControl label="E"  value={E}    min={0}  max={10000000} step={100}   onChange={v => { setE(v);    ctxRef.current?.reset() }} color="rose" unit="V/m" showSlider={false} />
-          <ParamControl label="B"  value={Bsel} min={0} max={100}    step={0.1} onChange={v => { setBsel(v); ctxRef.current?.reset() }} color="gold" unit="T"   showSlider={false} />
+          <ParamControl label="E"  value={E}    min={-10000000}  max={10000000} step={100}   onChange={v => { setE(v);    ctxRef.current?.reset() }} color="rose" unit="V/m" showSlider={false} />
+          <ParamControl label="B"  value={Bsel} min={-100} max={100}    step={0.1} onChange={v => { setBsel(v); ctxRef.current?.reset() }} color="gold" unit="T"   showSlider={false} />
           <ParamControl label="v inicial" value={vInitial} min={0} max={10000000} step={100} onChange={v => { 
             setVInitial(v);
             ctxRef.current?.reset();
@@ -527,7 +582,7 @@ export default function MassSpectrometerSim() {
 
           {/* Chamber */}
           <div style={{ fontSize: 10, fontFamily: 'monospace', color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 4 }}>Camara de deflexion</div>
-          <ParamControl label="B₀ camara"      value={B0}   min={0} max={100}   step={0.1} onChange={v => { setB0(v);   ctxRef.current?.reset() }} color="gold" unit="T"   showSlider={false} />
+          <ParamControl label="B₀ camara"      value={B0}   min={-100} max={100}   step={0.1} onChange={v => { setB0(v);   ctxRef.current?.reset() }} color="gold" unit="T"   showSlider={false} />
           <ParamControl label="masa" value={mFac} min={0}    max={1000} step={1}    onChange={v => { setMFac(v); ctxRef.current?.reset() }} color="cyan" unit="mp" showSlider={false} />
           <ParamControl label="|q|" value={qFac} min={0}   max={100}  step={1}    onChange={v => { setQFac(v); ctxRef.current?.reset() }} color="rose" unit="e"  showSlider={false} />
 

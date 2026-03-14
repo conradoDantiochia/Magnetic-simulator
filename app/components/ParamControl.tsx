@@ -48,8 +48,14 @@ export function ParamControl({
     const parsed = parseFloat(raw)
     if (!isNaN(parsed)) {
       onChange(parsed)
+      setEditing(false)
+    } else {
+      // Si la entrada no es un número (por ejemplo solo "-"), no cerrar
+      // para que el usuario pueda completar el valor sin perderlo.
+      if (inputRef.current) {
+        inputRef.current.focus()
+      }
     }
-    setEditing(false)
   }
 
   return (
