@@ -64,35 +64,37 @@ export class OrbitControls {
     on('wheel', el, (e) => { (e as WheelEvent).preventDefault(); this._spherical.radius=Math.max(this.minDistance, Math.min(this.maxDistance, this._spherical.radius*(1+(e as WheelEvent).deltaY*0.001))) }, { passive:false })
     let tx=0,ty=0
     let touchPanStartX = 0, touchPanStartY = 0
-    on('touchstart', el, (e: TouchEvent) => {
-      if (e.touches.length === 1) {
+    on('touchstart', el, (e) => {
+      const te = e as TouchEvent
+      if (te.touches.length === 1) {
         // Single finger: rotate
-        const t = e.touches[0]
+        const t = te.touches[0]
         this._drag = true
         tx = t.clientX
         ty = t.clientY
-      } else if (e.touches.length >= 2) {
+      } else if (te.touches.length >= 2) {
         // Two+ fingers: pan (average position)
         this._panning = true
-        const avgX = (e.touches[0].clientX + e.touches[1].clientX) / 2
-        const avgY = (e.touches[0].clientY + e.touches[1].clientY) / 2
+        const avgX = (te.touches[0].clientX + te.touches[1].clientX) / 2
+        const avgY = (te.touches[0].clientY + te.touches[1].clientY) / 2
         this._panStart.set(avgX, avgY)
         touchPanStartX = avgX
         touchPanStartY = avgY
       }
     })
-    on('touchmove', el, (e: TouchEvent) => {
-      e.preventDefault()
-      if (e.touches.length === 1 && this._drag) {
+    on('touchmove', el, (e) => {
+      const te = e as TouchEvent
+      te.preventDefault()
+      if (te.touches.length === 1 && this._drag) {
         // Single finger rotate
-        const t = e.touches[0]
+        const t = te.touches[0]
         this._rot(t.clientX - tx, t.clientY - ty)
         tx = t.clientX
         ty = t.clientY
-      } else if (e.touches.length >= 2 && this._panning) {
+      } else if (te.touches.length >= 2 && this._panning) {
         // Two+ fingers pan
-        const avgX = (e.touches[0].clientX + e.touches[1].clientX) / 2
-        const avgY = (e.touches[0].clientY + e.touches[1].clientY) / 2
+        const avgX = (te.touches[0].clientX + te.touches[1].clientX) / 2
+        const avgY = (te.touches[0].clientY + te.touches[1].clientY) / 2
         const deltaX = (avgX - touchPanStartX) * this.panSpeed * this._spherical.radius
         const deltaY = (avgY - touchPanStartY) * this.panSpeed * this._spherical.radius
         const cameraDir = new THREE.Vector3()
@@ -107,7 +109,8 @@ export class OrbitControls {
         this.update()
       }
     }, { passive: false })
-    on('touchend', el, (e: TouchEvent) => {
+    on('touchend', el, (e) => {
+      const te = e as TouchEvent
       this._drag = false
       this._panning = false
     })
