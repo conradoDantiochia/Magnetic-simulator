@@ -82,7 +82,7 @@ export class OrbitControls {
         touchPanStartY = avgY
       }
     })
-    on('touchmove', el, (e) => {
+    on('touchmove', el, (e: Event) => {
       const te = e as TouchEvent
       te.preventDefault()
       if (te.touches.length === 1 && this._drag) {
