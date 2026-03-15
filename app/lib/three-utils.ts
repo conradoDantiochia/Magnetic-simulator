@@ -6,11 +6,14 @@ export class OrbitControls {
   domElement: HTMLElement
   target = new THREE.Vector3()
   rotateSpeed = 0.8
+  panSpeed = 0.004
   minDistance = 1
   maxDistance = 100
   _spherical = new THREE.Spherical(10, Math.PI / 3, Math.PI / 4)
   private _drag = false
+  private _panning = false
   private _lx = 0; private _ly = 0
+  private _panStart = new THREE.Vector2()
   private _handlers: [string, EventTarget, EventListener, any?][] = []
 
   constructor(camera: THREE.PerspectiveCamera, el: HTMLElement) {
@@ -18,14 +21,96 @@ export class OrbitControls {
     const on = (evt: string, tgt: EventTarget, fn: EventListener, opts?: any) => {
       tgt.addEventListener(evt, fn, opts); this._handlers.push([evt, tgt, fn])
     }
-    on('mousedown',  el,     (e) => { this._drag=true; this._lx=(e as MouseEvent).clientX; this._ly=(e as MouseEvent).clientY })
-    on('mousemove',  window, (e) => { if(!this._drag)return; const me=e as MouseEvent; this._rot(me.clientX-this._lx, me.clientY-this._ly); this._lx=me.clientX; this._ly=me.clientY })
-    on('mouseup',    window, ()  => { this._drag=false })
-    on('wheel',      el,     (e) => { e.preventDefault(); this._spherical.radius=Math.max(this.minDistance, Math.min(this.maxDistance, this._spherical.radius*(1+(e as WheelEvent).deltaY*0.001))) }, { passive:false })
+    on('contextmenu', el, (e) => { (e as MouseEvent).preventDefault() })
+    on('mousedown', el, (e) => {
+      const me = e as MouseEvent
+      if (me.button === 1 || (me.button === 0 && me.shiftKey)) {
+        // Pan
+        this._panning = true
+        this._panStart.set(me.clientX, me.clientY)
+        me.preventDefault()
+      } else {
+        // Rotate
+        this._drag = true
+        this._lx = me.clientX
+        this._ly = me.clientY
+      }
+    })
+    on('mousemove', window, (e) => {
+      const me = e as MouseEvent
+      if (this._panning) {
+        const deltaX = (me.clientX - this._panStart.x) * this.panSpeed * this._spherical.radius
+        const deltaY = (me.clientY - this._panStart.y) * this.panSpeed * this._spherical.radius
+        const cameraDir = new THREE.Vector3()
+        this.camera.getWorldDirection(cameraDir)
+        const right = new THREE.Vector3().crossVectors(this.camera.up, cameraDir).normalize()
+        const up = this.camera.up.clone().normalize()
+        this.target.addScaledVector(right, -deltaX)
+        this.target.addScaledVector(up, deltaY)
+        this._panStart.set(me.clientX, me.clientY)
+        this.update()
+      } else if (this._drag) {
+        const dx = me.clientX - this._lx
+        const dy = me.clientY - this._ly
+        this._rot(dx, dy)
+        this._lx = me.clientX
+        this._ly = me.clientY
+      }
+    })
+    on('mouseup', window, () => {
+      this._panning = false
+      this._drag = false
+    })
+    on('wheel', el, (e) => { (e as WheelEvent).preventDefault(); this._spherical.radius=Math.max(this.minDistance, Math.min(this.maxDistance, this._spherical.radius*(1+(e as WheelEvent).deltaY*0.001))) }, { passive:false })
     let tx=0,ty=0
-    on('touchstart', el, (e) => { const t=(e as TouchEvent).touches[0]; this._drag=true; tx=t.clientX; ty=t.clientY })
-    on('touchmove',  el, (e) => { if(!this._drag)return; const t=(e as TouchEvent).touches[0]; this._rot(t.clientX-tx, t.clientY-ty); tx=t.clientX; ty=t.clientY })
-    on('touchend',   el, () => { this._drag=false })
+    let touchPanStartX = 0, touchPanStartY = 0
+    on('touchstart', el, (e: TouchEvent) => {
+      if (e.touches.length === 1) {
+        // Single finger: rotate
+        const t = e.touches[0]
+        this._drag = true
+        tx = t.clientX
+        ty = t.clientY
+      } else if (e.touches.length >= 2) {
+        // Two+ fingers: pan (average position)
+        this._panning = true
+        const avgX = (e.touches[0].clientX + e.touches[1].clientX) / 2
+        const avgY = (e.touches[0].clientY + e.touches[1].clientY) / 2
+        this._panStart.set(avgX, avgY)
+        touchPanStartX = avgX
+        touchPanStartY = avgY
+      }
+    })
+    on('touchmove', el, (e: TouchEvent) => {
+      e.preventDefault()
+      if (e.touches.length === 1 && this._drag) {
+        // Single finger rotate
+        const t = e.touches[0]
+        this._rot(t.clientX - tx, t.clientY - ty)
+        tx = t.clientX
+        ty = t.clientY
+      } else if (e.touches.length >= 2 && this._panning) {
+        // Two+ fingers pan
+        const avgX = (e.touches[0].clientX + e.touches[1].clientX) / 2
+        const avgY = (e.touches[0].clientY + e.touches[1].clientY) / 2
+        const deltaX = (avgX - touchPanStartX) * this.panSpeed * this._spherical.radius
+        const deltaY = (avgY - touchPanStartY) * this.panSpeed * this._spherical.radius
+        const cameraDir = new THREE.Vector3()
+        this.camera.getWorldDirection(cameraDir)
+        const right = new THREE.Vector3().crossVectors(this.camera.up, cameraDir).normalize()
+        const up = this.camera.up.clone().normalize()
+        this.target.addScaledVector(right, -deltaX)
+        this.target.addScaledVector(up, deltaY)
+        this._panStart.set(avgX, avgY)
+        touchPanStartX = avgX
+        touchPanStartY = avgY
+        this.update()
+      }
+    }, { passive: false })
+    on('touchend', el, (e: TouchEvent) => {
+      this._drag = false
+      this._panning = false
+    })
     this.update()
   }
   _rot(dx: number, dy: number) {

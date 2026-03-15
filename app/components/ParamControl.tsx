@@ -198,8 +198,8 @@ export function PlaybackControls({
 export function OrbitHint() {
   return (
     <div className="orbit-hint">
-      <span>🖱️ arrastrar para rotar</span>
-      <span>⚲ scroll para zoom</span>
+      <span>🖱️ arrastrar rotar | Shift+🖱️ mover</span>
+      <span>⚲ scroll zoom | 📱 2 dedos mover</span>
     </div>
   )
 }
