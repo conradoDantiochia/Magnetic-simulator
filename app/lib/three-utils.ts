@@ -64,7 +64,7 @@ export class OrbitControls {
     on('wheel', el, (e) => { (e as WheelEvent).preventDefault(); this._spherical.radius=Math.max(this.minDistance, Math.min(this.maxDistance, this._spherical.radius*(1+(e as WheelEvent).deltaY*0.001))) }, { passive:false })
     let tx=0,ty=0
     let touchPanStartX = 0, touchPanStartY = 0
-    on('touchstart', el, (e) => {
+    on('touchstart', el, (e:Event) => {
       const te = e as TouchEvent
       if (te.touches.length === 1) {
         // Single finger: rotate
