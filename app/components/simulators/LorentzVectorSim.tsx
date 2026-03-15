@@ -217,10 +217,10 @@ lines={[
 rows={[
 {label:'v',value:fmt(vV),color:'cyan'},
 {label:'B',value:fmt(BV),color:'rose'},
-{label:'E',value:fmt(EV),color:'blue'},
-{label:'v × B',value:fmt(vxB),color:'muted'},
+{label:'E',value:fmt(EV),color:'cyan'},
+{label:'v × B',value:fmt(vxB),color:'gold'},
 {label:'Fm',value:fmt(Fm),color:'rose'},
-{label:'Fe',value:fmt(Fe),color:'blue'},
+{label:'Fe',value:fmt(Fe),color:'cyan'},
 {label:'F total',value:fmt(FV),color:'gold'},
 {label:'|F|',value:Fmag.toExponential(3)+' N',color:'green'},
 {label:'angulo XY',value:`${angleXYdeg.toFixed(2)}° (${angleXYsex})`,color:'cyan'}
