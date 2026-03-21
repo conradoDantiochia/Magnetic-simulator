@@ -189,25 +189,25 @@ lines={[
 
 <div style={{flex:'1 1 250px'}}>
 
-<ParamControl label="q/e" value={safeNumber(q)} min={-10} max={10} step={1} onChange={v=>setQ(safeNumber(v))} color="rose"/>
+        <ParamControl label="q/e" value={safeNumber(q)} min={-10} max={10} step={1} onChange={v=>setQ(safeNumber(v))} color="rose" tooltip="Carga en múltiplos de carga del electrón. Negativo=electrones, positivo=protones/iones. Determina dirección de F."/>
 
-<ParamControl label="vx (m/s)" value={safeNumber(vx)} min={-1000000} max={1000000} step={1000} onChange={v=>setVx(safeNumber(v))} color="cyan"/>
+        <ParamControl label="vx (m/s)" value={safeNumber(vx)} min={-1000000} max={1000000} step={1000} onChange={v=>setVx(safeNumber(v))} color="cyan" tooltip="Componente x de velocidad v. Fm = q (v × B) perpendicular a plano v-B."/>
 
-<ParamControl label="vy (m/s)" value={safeNumber(vy)} min={-1000000} max={1000000} step={1000} onChange={v=>setVy(safeNumber(v))} color="cyan"/>
+        <ParamControl label="vy (m/s)" value={safeNumber(vy)} min={-1000000} max={1000000} step={1000} onChange={v=>setVy(safeNumber(v))} color="cyan" tooltip="Componente y de velocidad v."/>
 
-<ParamControl label="vz (m/s)" value={safeNumber(vz)} min={-1000000} max={1000000} step={1000} onChange={v=>setVz(safeNumber(v))} color="cyan"/>
+        <ParamControl label="vz (m/s)" value={safeNumber(vz)} min={-1000000} max={1000000} step={1000} onChange={v=>setVz(safeNumber(v))} color="cyan" tooltip="Componente z de velocidad v."/>
 
-<ParamControl label="Bx (T)" value={safeNumber(Bx)} min={-20} max={20} step={0.5} onChange={v=>setBx(safeNumber(v))} color="rose"/>
+        <ParamControl label="Bx (T)" value={safeNumber(Bx)} min={-20} max={20} step={0.5} onChange={v=>setBx(safeNumber(v))} color="rose" tooltip="Componente x del campo magnético B (rojo). Fm perpendicular a v y B."/>
 
-<ParamControl label="By (T)" value={safeNumber(By)} min={-20} max={20} step={0.5} onChange={v=>setBy(safeNumber(v))} color="rose"/>
+        <ParamControl label="By (T)" value={safeNumber(By)} min={-20} max={20} step={0.5} onChange={v=>setBy(safeNumber(v))} color="rose" tooltip="Componente y del campo magnético B (rojo)."/>
 
-<ParamControl label="Bz (T)" value={safeNumber(Bz)} min={-20} max={20} step={0.5} onChange={v=>setBz(safeNumber(v))} color="rose"/>
+        <ParamControl label="Bz (T)" value={safeNumber(Bz)} min={-20} max={20} step={0.5} onChange={v=>setBz(safeNumber(v))} color="rose" tooltip="Componente z del campo magnético B (rojo)."/>
 
-<ParamControl label="Ex (N/C)" value={safeNumber(Ex)} min={-20} max={20} step={0.5} onChange={v=>setEx(safeNumber(v))} color="gold"/>
+        <ParamControl label="Ex (N/C)" value={safeNumber(Ex)} min={-20} max={20} step={0.5} onChange={v=>setEx(safeNumber(v))} color="gold" tooltip="Componente x del campo eléctrico E (azul claro). Fe = qE paralela a E."/>
 
-<ParamControl label="Ey (N/C)" value={safeNumber(Ey)} min={-20} max={20} step={0.5} onChange={v=>setEy(safeNumber(v))} color="gold"/>
+        <ParamControl label="Ey (N/C)" value={safeNumber(Ey)} min={-20} max={20} step={0.5} onChange={v=>setEy(safeNumber(v))} color="gold" tooltip="Componente y del campo eléctrico E (azul claro)."/>
 
-<ParamControl label="Ez (N/C)" value={safeNumber(Ez)} min={-20} max={20} step={0.5} onChange={v=>setEz(safeNumber(v))} color="gold"/>
+        <ParamControl label="Ez (N/C)" value={safeNumber(Ez)} min={-20} max={20} step={0.5} onChange={v=>setEz(safeNumber(v))} color="gold" tooltip="Componente z del campo eléctrico E (azul claro)."/>
 
 </div>
 

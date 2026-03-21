@@ -121,10 +121,10 @@ export default function CircularMotionSim() {
 
   const panel = (
     <div style={{ padding: '10px 12px' }}>
-      <ParamControl label="q" value={q} min={-3.2e-19} max={3.2e-19} step={1e-20} onChange={setQ} color="cyan"  unit="C"   formatDisplay={x => x.toExponential(2)} showSlider={false} />
-      <ParamControl label="m"   value={m} min={9.11e-31} max={3e-26} step={5e-29} onChange={setM} color="gold" unit="kg"  formatDisplay={x => x.toExponential(2)} showSlider={false} />
-      <ParamControl label="v"   value={v} min={1e4} max={5e7} step={1e5}          onChange={setV} color="rose" unit="m/s" formatDisplay={x => x.toExponential(2)} showSlider={false} />
-      <ParamControl label="B"   value={B} min={1e-5} max={5} step={1e-4}          onChange={setB} color="cyan" unit="T"   formatDisplay={x => x.toExponential(2)} showSlider={false} />
+      <ParamControl label="q" value={q} min={-3.2e-19} max={3.2e-19} step={1e-20} onChange={setQ} color="cyan"  unit="C"   formatDisplay={x => x.toExponential(2)} showSlider={false} tooltip="Carga eléctrica q. Negativa=electron, positiva=protón/iones. Determina dirección de giro." />
+<ParamControl label="m"   value={m} min={9.11e-31} max={3e-26} step={5e-29} onChange={setM} color="gold" unit="kg"  formatDisplay={x => x.toExponential(2)} showSlider={false} tooltip="Masa de la partícula. Radio r y periodo T crecen con m." />
+<ParamControl label="v"   value={v} min={1e4} max={5e7} step={1e5}          onChange={setV} color="rose" unit="m/s" formatDisplay={x => x.toExponential(2)} showSlider={false} tooltip="Velocidad inicial. Solo afecta fuerza F=qvB, no r ni T (independientes de v)." />
+<ParamControl label="B"   value={B} min={1e-5} max={5} step={1e-4}          onChange={setB} color="cyan" unit="T"   formatDisplay={x => x.toExponential(2)} showSlider={false} tooltip="Campo magnético uniforme (flechas verdes). r inverso a B, f proporcional a B." />
       <div style={{ marginTop: 8 }}>
         <PlaybackControls paused={paused} onToggle={() => setPaused(p => !p)} onReset={() => sceneRef.current?.reset()} speed={speed} onSpeed={setSpeed} />
       </div>
@@ -148,8 +148,8 @@ export default function CircularMotionSim() {
 
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, marginBottom: 8, alignItems: 'center' }}>
         <span style={{ fontSize: 10, fontFamily: 'monospace', color: 'var(--muted)' }}>Preset:</span>
-        {PRESETS.map(p => (
-          <button key={p.name} onClick={() => { setQ(p.q); setM(p.m); setV(p.v); setB(p.B) }}
+{PRESETS.map(p => (
+          <button key={p.name} onClick={() => { setQ(p.q); setM(p.m); setV(p.v); setB(p.B) }} title={`Cargar preset: ${p.name} (q=${p.q.toExponential(1)}C, m=${p.m.toExponential(1)}kg, v=${p.v.toExponential(1)}m/s, B=${p.B.toExponential(1)}T)`}
             style={{ padding: '2px 8px', borderRadius: 5, fontSize: 10, fontFamily: 'monospace', background: 'rgba(0,0,0,0.4)', border: '1px solid #1e3a5f', color: '#4a7090', cursor: 'pointer' }}>
             {p.name}
           </button>

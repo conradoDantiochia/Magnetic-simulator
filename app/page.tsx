@@ -1,5 +1,6 @@
 'use client'
 import { useState } from 'react'
+import Link from 'next/link'
 import CircularMotionSim from './components/simulators/CircularMotionSim'
 import LorentzVectorSim from './components/simulators/LorentzVectorSim'
 import MassSpectrometerSim from './components/simulators/MassSpectrometerSim'
@@ -47,7 +48,7 @@ export default function HomePage() {
           </h1>
           <span className="text-gray-500 text-sm font-mono hidden sm:inline">-- Simulador de Fuerzas Magneticas</span>
         </div>
-        <div className="ml-5 flex flex-wrap gap-3 mt-2">
+<div className="ml-5 flex flex-wrap gap-3 mt-2">
           {[
             { label: 'F = q(v x B)', color: '#00f0ff' },
             { label: 'r = mv/(qB)',  color: '#ffc832' },
@@ -55,10 +56,23 @@ export default function HomePage() {
             { label: 'f = qB/(2pm)', color: '#2dff6e' },
           ].map(f => (
             <span key={f.label} className="px-2 py-1 rounded text-xs font-mono"
-              style={{ background: 'rgba(0,0,0,0.4)', border: '1px solid rgba(255,255,255,0.08)', color: f.color }}>
+              style={{ background: 'rgba(0,0,0,0.4)', border: '1px solid rgba(255,255,255,0.08)', color: f.color }}
+              title={`Fórmula clave: ${f.label}`}>
               {f.label}
             </span>
           ))}
+        </div>
+        {/* Manual button */}
+        <div className="ml-auto flex gap-2 mt-2">
+          <Link href="/manual" className="flex items-center gap-2 px-4 py-2 rounded-lg transition-all duration-200 whitespace-nowrap"
+            style={{
+              background: 'rgba(0,240,255,0.12)',
+              border: '1px solid rgba(0,240,255,0.45)',
+              color: '#00f0ff',
+            }}
+            title="Guía completa de uso de todos los simuladores">
+            📖 Manual
+          </Link>
         </div>
       </header>
 
@@ -71,7 +85,8 @@ export default function HomePage() {
             style={{
               background: active === tab.id ? 'rgba(0,240,255,0.12)' : 'rgba(0,0,0,0.3)',
               border: `1px solid ${active === tab.id ? 'rgba(0,240,255,0.45)' : '#1a3350'}`,
-            }}>
+            }}
+            title={tab.desc}>
             <span className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold font-mono"
               style={{ background: active === tab.id ? '#00f0ff' : '#1a3350', color: active === tab.id ? '#000' : '#4a7090' }}>
               {tab.num}
@@ -111,15 +126,16 @@ export default function HomePage() {
       {/* Footer -- constants reference */}
       <div className="mt-4 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2">
         {[
-          { icon: 'e',  label: 'Carga electron', val: '1.6x10^-19 C' },
-          { icon: 'me', label: 'Masa electron',  val: '9.11x10^-31 kg' },
-          { icon: 'mp', label: 'Masa proton',    val: '1.67x10^-27 kg' },
-          { icon: 'T',  label: '1 Tesla',        val: '1 kg/(A s^2)' },
-          { icon: 'G',  label: '1 Gauss',        val: '10^-4 T' },
-          { icon: 'RHR', label: 'Regla mano der.', val: 'v x B -> F' },
+          { icon: 'e',  label: 'Carga electron', val: '1.6×10^{-19} C', tooltip: 'Carga elemental e = 1.602×10^{-19} C' },
+          { icon: 'me', label: 'Masa electron',  val: '9.11×10^{-31} kg', tooltip: 'M_e ≈ masa del electrón' },
+          { icon: 'mp', label: 'Masa proton',    val: '1.67×10^{-27} kg', tooltip: 'M_p ≈ 1836 M_e, masa unidad atómica' },
+          { icon: 'T',  label: '1 Tesla',        val: '1 kg/(A s²)', tooltip: 'Unidad SI campo magnético. 1 T = 10.000 Gauss' },
+          { icon: 'G',  label: '1 Gauss',        val: '10^{-4} T', tooltip: 'Unidad CGS común en física experimental' },
+          { icon: 'RHR', label: 'Regla mano der.', val: 'v ⊓ B → F', tooltip: 'Regla mano derecha: v × B da dirección fuerza Lorentz para q>0' },
         ].map(c => (
           <div key={c.label} className="p-2 rounded-lg text-center"
-            style={{ background: 'rgba(0,0,0,0.3)', border: '1px solid #1a3350' }}>
+            style={{ background: 'rgba(0,0,0,0.3)', border: '1px solid #1a3350' }}
+            title={c.tooltip}>
             <div className="text-xs font-bold font-mono" style={{ color: '#00f0ff' }}>{c.icon}</div>
             <div className="text-xs text-gray-500 font-mono mt-0.5">{c.label}</div>
             <div className="text-xs font-mono mt-0.5" style={{ color: '#ffc832' }}>{c.val}</div>

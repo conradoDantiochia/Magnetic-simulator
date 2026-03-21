@@ -567,12 +567,12 @@ export default function MassSpectrometerSim() {
 
           {/* Selector */}
           <div style={{ fontSize: 10, fontFamily: 'monospace', color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 4 }}>Selector de velocidades</div>
-          <ParamControl label="E"  value={E}    min={-10000000}  max={10000000} step={100}   onChange={v => { setE(v);    ctxRef.current?.reset() }} color="rose" unit="V/m" showSlider={false} />
-          <ParamControl label="B"  value={Bsel} min={-100} max={100}    step={0.1} onChange={v => { setBsel(v); ctxRef.current?.reset() }} color="gold" unit="T"   showSlider={false} />
+          <ParamControl label="E"  value={E}    min={-10000000}  max={10000000} step={100}   onChange={v => { setE(v);    ctxRef.current?.reset() }} color="rose" unit="V/m" showSlider={false} tooltip="Campo eléctrico selector (↓ negativo arriba). v = E / B para pasar recto." />
+          <ParamControl label="B"  value={Bsel} min={-100} max={100}    step={0.1} onChange={v => { setBsel(v); ctxRef.current?.reset() }} color="gold" unit="T"   showSlider={false} tooltip="Campo magnético selector (verde). v = E / |B| para balance con E (rectilíneo)." />
           <ParamControl label="v inicial" value={vInitial} min={0} max={10000000} step={100} onChange={v => { 
             setVInitial(v);
             ctxRef.current?.reset();
-          }} color="cyan" unit="m/s" showSlider={false} formatDisplay={(v) => Math.floor(v).toString()} />
+          }} color="cyan" unit="m/s" showSlider={false} formatDisplay={(v) => Math.floor(v).toString()} tooltip="Velocidad de entrada al selector. Solo v = E/B pasa recto sin desviarse." />
 
           {/* v readout */}
           <div style={{ margin: '6px 0 10px', padding: '5px 10px', borderRadius: 6, background: 'rgba(0,0,0,0.35)', border: '1px solid #1a3050', fontSize: 11, fontFamily: 'monospace', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -582,9 +582,9 @@ export default function MassSpectrometerSim() {
 
           {/* Chamber */}
           <div style={{ fontSize: 10, fontFamily: 'monospace', color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 4 }}>Camara de deflexion</div>
-          <ParamControl label="B₀ camara"      value={B0}   min={-100} max={100}   step={0.1} onChange={v => { setB0(v);   ctxRef.current?.reset() }} color="gold" unit="T"   showSlider={false} />
-          <ParamControl label="masa" value={mFac} min={0}    max={1000} step={1}    onChange={v => { setMFac(v); ctxRef.current?.reset() }} color="cyan" unit="mp" showSlider={false} />
-          <ParamControl label="|q|" value={qFac} min={0}   max={100}  step={1}    onChange={v => { setQFac(v); ctxRef.current?.reset() }} color="rose" unit="e"  showSlider={false} />
+          <ParamControl label="B₀ camara"      value={B0}   min={-100} max={100}   step={0.1} onChange={v => { setB0(v);   ctxRef.current?.reset() }} color="gold" unit="T"   showSlider={false} tooltip="Campo magnético cámara (verde claro). Radio r = mv / |q B₀|. Separa por m/q." />
+          <ParamControl label="masa" value={mFac} min={0}    max={1000} step={1}    onChange={v => { setMFac(v); ctxRef.current?.reset() }} color="cyan" unit="mp" showSlider={false} tooltip="Masa en múltiplos de masa protón. r proporcional a m (iones más pesados aterrizan más lejos)." />
+          <ParamControl label="|q|" value={qFac} min={0}   max={100}  step={1}    onChange={v => { setQFac(v); ctxRef.current?.reset() }} color="rose" unit="e"  showSlider={false} tooltip="Carga absoluta en múltiplos de e. r inversa a |q| (iones más cargados curvan más)." />
 
           <div style={{ marginTop: 10 }}>
             <PlaybackControls
