@@ -6,7 +6,52 @@ import { createScene, handleResize, createArrow, C, disposeGroup, makeSprite } f
 import { ParamControl, ResultsPanel, FormulaBox, OrbitHint } from '@/app/components/ParamControl'
 import { vec3, cross, scale, magnitude, add, ELECTRON_CHARGE, Vec3 } from '@/app/lib/physics'
 
-const PRESETS = [
+interface LorentzPreset {
+  name: string
+  note: string
+  values: {
+    q: number
+    vx: number
+    vy: number
+    vz: number
+    Bx: number
+    By: number
+    Bz: number
+    Ex: number
+    Ey: number
+    Ez: number
+  }
+}
+
+const EXERCISE_PRESETS: LorentzPreset[] = [
+  {
+    name: 'Ej 2',
+    note: 'Con el electron moviendose en +x y la desviacion en +y, el campo magnetico debe apuntar en +z.',
+    values: { q: -1, vx: 8e5, vy: 0, vz: 0, Bx: 0, By: 0, Bz: 2e-5, Ex: 0, Ey: 0, Ez: 0 },
+  },
+  {
+    name: 'Ej 3',
+    note: 'Particula alfa: v al norte (+y), B al este (+x). Debe dar F = -1.216e-13 k N y |F| = 1.216e-13 N.',
+    values: { q: 2, vx: 0, vy: 3.8e5, vz: 0, Bx: 1.0, By: 0, Bz: 0, Ex: 0, Ey: 0, Ez: 0 },
+  },
+  {
+    name: 'Ej 4',
+    note: 'Electron en B = (4i - 11j) T y v = (-2i + 3j - 7k) m/s. Debe dar F = (1.232e-17 i + 4.48e-18 j - 1.60e-18 k) N.',
+    values: { q: -1, vx: -2, vy: 3, vz: -7, Bx: 4, By: -11, Bz: 0, Ex: 0, Ey: 0, Ez: 0 },
+  },
+  {
+    name: 'Ej 5',
+    note: 'Proton hacia el oeste (-x) en un campo terrestre hacia el sur (-y). La fuerza queda en +z y su modulo es 4.96e-17 N.',
+    values: { q: 1, vx: -6.2e6, vy: 0, vz: 0, Bx: 0, By: -0.5e-4, Bz: 0, Ex: 0, Ey: 0, Ez: 0 },
+  },
+  {
+    name: 'Ej 6',
+    note: 'Con q = 3.2e-19 C = 2e, debe dar F = (3.52e-18 i - 1.60e-18 j + 0k) N y un angulo XY de -24.44 deg.',
+    values: { q: 2, vx: 2, vy: 3, vz: -1, Bx: 2, By: 4, Bz: 1, Ex: 4, Ey: -1, Ez: -2 },
+  },
+]
+
+const GUIDED_PRESETS: LorentzPreset[] = [
   {
     name: 'Solo B',
     note: 'La fuerza magnetica aparece perpendicular a v y a B.',
@@ -28,6 +73,8 @@ const PRESETS = [
     values: { q: 1, vx: 0, vy: 0, vz: 8e5, Bx: 0, By: 0, Bz: 2e-5, Ex: 0, Ey: 0, Ez: 0 },
   },
 ]
+
+const DEFAULT_NOTE = 'Usa los botones Ej 2 a Ej 6 para cargar directamente los problemas vectoriales de la guia.'
 
 function toSexagesimal(angle: number) {
   const sign = angle < 0 ? '-' : ''
@@ -58,7 +105,8 @@ export default function LorentzVectorSim() {
   const [Ex, setEx] = useState(0)
   const [Ey, setEy] = useState(0)
   const [Ez, setEz] = useState(0)
-  const [presetNote, setPresetNote] = useState(PRESETS[0].note)
+  const [presetNote, setPresetNote] = useState(DEFAULT_NOTE)
+  const [selectedPreset, setSelectedPreset] = useState<string | null>(null)
   const [showHelp, setShowHelp] = useState(false)
   const [showReadout, setShowReadout] = useState(false)
 
@@ -157,7 +205,7 @@ export default function LorentzVectorSim() {
     })
   }, [vV, BV, EV, Fm, Fe, FV])
 
-  const applyPreset = (preset: typeof PRESETS[number]) => {
+  const applyPreset = (preset: LorentzPreset) => {
     const { values } = preset
     setQ(values.q)
     setVx(values.vx)
@@ -170,6 +218,7 @@ export default function LorentzVectorSim() {
     setEy(values.Ey)
     setEz(values.Ez)
     setPresetNote(preset.note)
+    setSelectedPreset(preset.name)
   }
 
   return (
@@ -197,6 +246,14 @@ export default function LorentzVectorSim() {
           </div>
           <div style={{ fontFamily: 'var(--font-mono)', fontSize: 12, lineHeight: 1.7, color: 'var(--text)' }}>
             Como se construye v x B, cuando Fm desaparece, cuando E compensa al termino magnetico y hacia donde apunta F total.
+          </div>
+        </div>
+        <div style={{ padding: '10px 12px', borderRadius: 10, background: 'rgba(0,240,255,0.04)', border: '1px solid rgba(0,240,255,0.16)' }}>
+          <div style={{ fontSize: 10, fontFamily: 'var(--font-mono)', color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>
+            Convencion para la guia
+          </div>
+          <div style={{ fontFamily: 'var(--font-mono)', fontSize: 12, lineHeight: 1.7, color: 'var(--text)' }}>
+            Usa +x = este, +y = norte y +z = arriba para interpretar los ejercicios de direccion y sentido.
           </div>
         </div>
       </div>
@@ -269,10 +326,10 @@ export default function LorentzVectorSim() {
         )}
 
         <div style={{ fontSize: 10, fontFamily: 'var(--font-mono)', color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 5 }}>
-          Casos guiados
+          Ejercicios de la guia
         </div>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-          {PRESETS.map((preset) => (
+          {EXERCISE_PRESETS.map((preset) => (
             <button
               key={preset.name}
               onClick={() => applyPreset(preset)}
@@ -281,9 +338,34 @@ export default function LorentzVectorSim() {
                 borderRadius: 6,
                 fontSize: 11,
                 fontFamily: 'var(--font-mono)',
-                background: 'rgba(0,0,0,0.35)',
-                border: '1px solid #1e3a5f',
-                color: '#84b9d8',
+                background: selectedPreset === preset.name ? 'rgba(0,240,255,0.12)' : 'rgba(0,0,0,0.35)',
+                border: `1px solid ${selectedPreset === preset.name ? 'var(--cyan)' : '#1e3a5f'}`,
+                color: selectedPreset === preset.name ? 'var(--cyan)' : '#84b9d8',
+                cursor: 'pointer',
+              }}
+              title={preset.note}
+            >
+              {preset.name}
+            </button>
+          ))}
+        </div>
+
+        <div style={{ fontSize: 10, fontFamily: 'var(--font-mono)', color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.08em', margin: '10px 0 5px' }}>
+          Casos guiados
+        </div>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+          {GUIDED_PRESETS.map((preset) => (
+            <button
+              key={preset.name}
+              onClick={() => applyPreset(preset)}
+              style={{
+                padding: '4px 10px',
+                borderRadius: 6,
+                fontSize: 11,
+                fontFamily: 'var(--font-mono)',
+                background: selectedPreset === preset.name ? 'rgba(0,240,255,0.12)' : 'rgba(0,0,0,0.35)',
+                border: `1px solid ${selectedPreset === preset.name ? 'var(--cyan)' : '#1e3a5f'}`,
+                color: selectedPreset === preset.name ? 'var(--cyan)' : '#84b9d8',
                 cursor: 'pointer',
               }}
               title={preset.note}

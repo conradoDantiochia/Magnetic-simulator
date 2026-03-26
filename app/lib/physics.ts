@@ -55,13 +55,14 @@ export const circularMotion = (q: number, m: number, v: number, B: number) => {
 }
 
 export const massSpectrometer = (E: number, B: number, B0: number, m: number, q: number) => {
-  const selectorB = Math.abs(B)
-  const chamberB = Math.abs(B0)
-  const absQ = Math.abs(q)
-  const v = Math.abs(E) / selectorB
-  const r = m * v / (absQ * chamberB)
-  const qOverM = absQ / m
-  return { v, r, qOverM }
+  const v = B === 0 ? Number.NaN : E / B
+  const rSigned = q === 0 || B0 === 0 || !Number.isFinite(v) ? Number.NaN : (m * v) / (q * B0)
+  const r = Number.isFinite(rSigned) ? Math.abs(rSigned) : Number.NaN
+  const qOverM = m === 0 ? Number.NaN : q / m
+  const qOverMAbs = Number.isFinite(qOverM) ? Math.abs(qOverM) : Number.NaN
+  const selectorPasses = Number.isFinite(v) && v > 0
+  const curvatureSign = Number.isFinite(rSigned) ? Math.sign(rSigned) : 0
+  return { v, r, rSigned, qOverM, qOverMAbs, selectorPasses, curvatureSign }
 }
 
 export const dipoleTorque = (N: number, I: number, A: number, B: number, thetaDeg: number) => {

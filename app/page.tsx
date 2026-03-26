@@ -14,21 +14,21 @@ const TABS: { id: TabId; num: string; label: string; short: string; desc: string
     num: '1',
     label: 'Particula en campo magnetico',
     short: 'Sim 1 -- Circular',
-    desc: 'Movimiento circular en B uniforme. Ejes de referencia en blanco y opcion de ver valores en pantalla.',
+    desc: 'Movimiento circular en B uniforme. Incluye presets de la guia para Ej 1, Ej 3 y Ej 5.',
   },
   {
     id: 'lorentz',
     num: '2',
     label: 'Fuerza de Lorentz',
     short: 'Sim 2 -- Lorentz',
-    desc: 'Entradas: carga q, velocidad v, campo electrico E y campo magnetico B. Observa Fm, Fe y F total.',
+    desc: 'Entradas: carga q, velocidad v, campo electrico E y campo magnetico B. Incluye presets de la guia para Ej 2 a Ej 6.',
   },
   {
     id: 'spectrometer',
     num: '3',
     label: 'Espectrometro de masas',
     short: 'Sim 3 -- Espectrometro',
-    desc: 'Entradas: E, B del selector, B0 de la camara, carga y masa. Objetivo: estudiar la relacion q/m.',
+    desc: 'Entradas: E, B del selector, B0 de la camara, carga y masa. Incluye el preset exacto del Ej 7.',
   },
 ]
 

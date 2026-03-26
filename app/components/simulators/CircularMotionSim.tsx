@@ -16,12 +16,34 @@ import {
 import { ParamControl, ResultsPanel, FormulaBox, PlaybackControls, OrbitHint } from '@/app/components/ParamControl'
 import { circularMotion, ELECTRON_CHARGE, PROTON_MASS } from '@/app/lib/physics'
 
-const PRESETS = [
-  { name: 'Proton (P5)', q: ELECTRON_CHARGE, m: PROTON_MASS, v: 6.2e6, B: 0.5e-4 },
-  { name: 'Alfa (P3)', q: 2 * ELECTRON_CHARGE, m: 4 * PROTON_MASS, v: 3.8e5, B: 1.0 },
-  { name: 'Electron', q: -ELECTRON_CHARGE, m: 9.11e-31, v: 5e7, B: 0.01 },
-  { name: 'Ion (P7)', q: ELECTRON_CHARGE, m: 2.18e-26, v: 1e3, B: 0.93 },
+const EXERCISE_PRESETS = [
+  {
+    name: 'Ej 1',
+    q: ELECTRON_CHARGE,
+    m: PROTON_MASS,
+    v: 2.5e6,
+    B: 0.8,
+    note: 'Caso base: carga positiva con v perpendicular a B. La trayectoria es circular y se caracteriza con F, r, T y f.',
+  },
+  {
+    name: 'Ej 3',
+    q: 2 * ELECTRON_CHARGE,
+    m: 4 * PROTON_MASS,
+    v: 3.8e5,
+    B: 1.0,
+    note: 'Particula alfa. La magnitud esperada es |F| = 1.216e-13 N. La direccion se analiza con la regla de la mano derecha.',
+  },
+  {
+    name: 'Ej 5',
+    q: ELECTRON_CHARGE,
+    m: PROTON_MASS,
+    v: 6.2e6,
+    B: 0.5e-4,
+    note: 'Proton en el campo terrestre. Debe dar |F| = 4.96e-17 N y r = 1.294e3 m.',
+  },
 ]
+
+const DEFAULT_PRESET = EXERCISE_PRESETS[2]
 
 const ORBIT_R = 2.6
 const F_REF = ELECTRON_CHARGE * 6.2e6 * 0.5e-4
@@ -32,16 +54,19 @@ export default function CircularMotionSim() {
   const mountRef = useRef<HTMLDivElement>(null)
   const sceneRef = useRef<any>(null)
 
-  const [q, setQ] = useState(ELECTRON_CHARGE)
-  const [m, setM] = useState(PROTON_MASS)
-  const [v, setV] = useState(6.2e6)
-  const [B, setB] = useState(0.5e-4)
+  const [q, setQ] = useState(DEFAULT_PRESET.q)
+  const [m, setM] = useState(DEFAULT_PRESET.m)
+  const [v, setV] = useState(DEFAULT_PRESET.v)
+  const [B, setB] = useState(DEFAULT_PRESET.B)
   const [paused, setPaused] = useState(false)
   const [speed, setSpeed] = useState(1)
   const [showHelp, setShowHelp] = useState(false)
   const [showReadout, setShowReadout] = useState(false)
+  const [activePreset, setActivePreset] = useState(DEFAULT_PRESET.name)
+  const [presetNote, setPresetNote] = useState(DEFAULT_PRESET.note)
 
   const result = circularMotion(q, m, v, B)
+  const trajectoryLabel = Math.abs(q) > 0 && Math.abs(v) > 0 && Math.abs(B) > 0 ? 'circular uniforme' : 'rectilinea'
 
   const screenRows = [
     { label: 'q', value: `${formatExp(q)} C`, color: 'var(--cyan)' },
@@ -252,6 +277,7 @@ export default function CircularMotionSim() {
       <div style={{ marginTop: 8 }}>
         <ResultsPanel
           rows={[
+            { label: 'trayectoria', value: trajectoryLabel, color: 'green' },
             { label: 'q', value: `${q.toExponential(2)} C`, color: 'cyan' },
             { label: 'F = |q|vB', value: `${result.F.toExponential(3)} N`, color: 'gold' },
             { label: 'r = mv/(|q|B)', value: `${result.r.toExponential(3)} m`, color: 'cyan' },
@@ -269,7 +295,7 @@ export default function CircularMotionSim() {
         title="Movimiento circular en B uniforme"
         lines={[
           'F = q(v x B)   |   r = mv / (|q|B)   |   f = |q|B / (2*pi*m)',
-          'El signo de q determina el sentido de giro. Los ejes blancos solo son referencia espacial.',
+          'Presets de la guia: Ej 1, Ej 3 y Ej 5. Los ejes blancos solo son referencia espacial.',
         ]}
       />
 
@@ -290,8 +316,8 @@ export default function CircularMotionSim() {
       </div>
 
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 8, alignItems: 'center' }}>
-        <span style={{ fontSize: 10, fontFamily: 'monospace', color: 'var(--muted)' }}>Preset:</span>
-        {PRESETS.map((preset) => (
+        <span style={{ fontSize: 10, fontFamily: 'monospace', color: 'var(--muted)' }}>Ejercicios de la guia:</span>
+        {EXERCISE_PRESETS.map((preset) => (
           <button
             key={preset.name}
             onClick={() => {
@@ -299,17 +325,19 @@ export default function CircularMotionSim() {
               setM(preset.m)
               setV(preset.v)
               setB(preset.B)
+              setActivePreset(preset.name)
+              setPresetNote(preset.note)
               sceneRef.current?.reset()
             }}
-            title={`Cargar preset: ${preset.name}`}
+            title={preset.note}
             style={{
               padding: '2px 8px',
               borderRadius: 5,
               fontSize: 10,
               fontFamily: 'monospace',
-              background: 'rgba(0,0,0,0.4)',
-              border: '1px solid #1e3a5f',
-              color: '#4a7090',
+              background: activePreset === preset.name ? 'rgba(0,240,255,0.12)' : 'rgba(0,0,0,0.4)',
+              border: `1px solid ${activePreset === preset.name ? 'var(--cyan)' : '#1e3a5f'}`,
+              color: activePreset === preset.name ? 'var(--cyan)' : '#84b9d8',
               cursor: 'pointer',
             }}
           >
@@ -357,6 +385,22 @@ export default function CircularMotionSim() {
         >
           ? Ayuda
         </button>
+      </div>
+
+      <div
+        style={{
+          marginBottom: 12,
+          padding: '8px 10px',
+          borderRadius: 8,
+          background: 'rgba(0,240,255,0.04)',
+          border: '1px solid rgba(0,240,255,0.14)',
+          fontSize: 11,
+          fontFamily: 'var(--font-mono)',
+          color: 'var(--text)',
+          lineHeight: 1.7,
+        }}
+      >
+        {presetNote}
       </div>
 
       {showHelp && (

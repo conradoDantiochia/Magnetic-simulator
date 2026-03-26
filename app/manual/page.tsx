@@ -61,6 +61,10 @@ export default function ManualPage() {
               <p>Los ejes X, Y y Z se muestran en blanco como referencia y se puede activar una casilla para ver los valores en la propia pantalla.</p>
             </div>
             <div>
+              <div className="font-bold text-cyan-400">Presets de la guia</div>
+              <p>Incluye botones directos para Ej 1, Ej 3 y Ej 5.</p>
+            </div>
+            <div>
               <div className="font-bold text-cyan-400">Que observar</div>
               <p>Como cambian F, r, T y f cuando se modifica cada parametro y como el signo de q altera el sentido del giro.</p>
             </div>
@@ -101,7 +105,7 @@ export default function ManualPage() {
             </div>
             <div>
               <div className="font-bold text-cyan-400">Como conviene usarla</div>
-              <p>Empezar con los casos guiados: solo B, solo E, balance E-B y v paralela a B.</p>
+              <p>Primero se pueden usar los presets de la guia Ej 2 a Ej 6 y despues los casos guiados: solo B, solo E, balance E-B y v paralela a B.</p>
             </div>
             <div>
               <div className="font-bold text-cyan-400">Que observar</div>
@@ -151,7 +155,7 @@ export default function ManualPage() {
             <div className="space-y-4">
               <div>
                 <div className="font-bold text-cyan-400">Lectura</div>
-                <p>La velocidad seleccionada se calcula automaticamente como v = E / B y el panel destaca |q|/m como salida principal.</p>
+                <p>La velocidad seleccionada se calcula automaticamente como v = E / B y el panel destaca |q|/m como salida principal. Incluye un preset exacto del Ej 7.</p>
               </div>
               <div>
                 <div className="font-bold text-cyan-400">Nota de visualizacion</div>
