@@ -1,12 +1,13 @@
 'use client'
-import { useState, useRef } from 'react'
+
+import { type CSSProperties, useRef, useState } from 'react'
 
 type Color = 'cyan' | 'gold' | 'rose' | 'green'
 
 const COLOR_MAP: Record<Color, string> = {
-  cyan:  '#00f0ff',
-  gold:  '#ffc832',
-  rose:  '#ff3d6b',
+  cyan: '#00f0ff',
+  gold: '#ffc832',
+  rose: '#ff3d6b',
   green: '#2dff6e',
 }
 
@@ -21,48 +22,55 @@ interface ParamControlProps {
   unit?: string
   tooltip?: string
   formatDisplay?: (v: number) => string
-  showSlider?: boolean  // when false the numeric input only is shown, no range slider
+  showSlider?: boolean
 }
 
 export function ParamControl({
-  label, value, min, max, step, onChange,
-  color = 'cyan', unit = '', tooltip = '', formatDisplay, showSlider = false,
+  label,
+  value,
+  min,
+  max,
+  step,
+  onChange,
+  color = 'cyan',
+  unit = '',
+  tooltip = '',
+  formatDisplay,
+  showSlider = false,
 }: ParamControlProps) {
   const [editing, setEditing] = useState(false)
   const [raw, setRaw] = useState('')
   const inputRef = useRef<HTMLInputElement>(null)
   const col = COLOR_MAP[color]
 
-  // format a number as plain decimal (no exponential notation)
-  const formatPlain = (v: number) => {
-    // toLocaleString with fullwide prevents scientific notation for most values
-    const s = v.toLocaleString('fullwide', { useGrouping: false, maximumFractionDigits: 20 });
-    // strip trailing zeros after decimal
-    return s.replace(/\.?0+$/, '');
-  };
+  const formatPlain = (current: number) => {
+    const display = current.toLocaleString('fullwide', {
+      useGrouping: false,
+      maximumFractionDigits: 20,
+    })
+    return display.replace(/\.?0+$/, '')
+  }
 
-  const display = formatDisplay
-    ? formatDisplay(value)
-    : formatPlain(value);
+  const display = formatDisplay ? formatDisplay(value) : formatPlain(value)
 
   const commitRaw = () => {
     const parsed = parseFloat(raw)
-    if (!isNaN(parsed)) {
+    if (!Number.isNaN(parsed)) {
       onChange(parsed)
       setEditing(false)
-    } else {
-      // Si la entrada no es un número (por ejemplo solo "-"), no cerrar
-      // para que el usuario pueda completar el valor sin perderlo.
-      if (inputRef.current) {
-        inputRef.current.focus()
-      }
+      return
     }
+
+    inputRef.current?.focus()
   }
 
   return (
     <div className="param-control">
-      <div className="flex items-center justify-between mb-1 gap-2">
-        <label className="text-xs text-gray-400 font-mono truncate flex-1" title={tooltip || `Ajustar ${label.toLowerCase()}${unit ? ` (${unit})` : ''}`}>
+      <div className="mb-1 flex items-center justify-between gap-2">
+        <label
+          className="flex-1 truncate text-xs font-mono text-gray-400"
+          title={tooltip || `Ajustar ${label.toLowerCase()}${unit ? ` (${unit})` : ''}`}
+        >
           {label}
         </label>
 
@@ -73,16 +81,22 @@ export function ParamControl({
             defaultValue={formatPlain(value)}
             className="manual-input"
             style={{ color: col, borderColor: col, width: 110 }}
-            onChange={e => setRaw(e.target.value)}
+            onChange={(event) => setRaw(event.target.value)}
             onBlur={commitRaw}
-            onKeyDown={e => { if (e.key === 'Enter') commitRaw(); if (e.key === 'Escape') setEditing(false) }}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter') commitRaw()
+              if (event.key === 'Escape') setEditing(false)
+            }}
             autoFocus
           />
         ) : (
           <button
-            onClick={() => { setEditing(true); setRaw(String(value)) }}
+            onClick={() => {
+              setEditing(true)
+              setRaw(String(value))
+            }}
             className="value-badge"
-            style={{ color: col, borderColor: col + '55' }}
+            style={{ color: col, borderColor: `${col}55` }}
             title={tooltip ? `Valor actual: ${display} ${unit}. ${tooltip}. Clic para editar.` : 'Clic para editar manualmente'}
           >
             {display} <span className="text-gray-500">{unit}</span>
@@ -91,7 +105,7 @@ export function ParamControl({
       </div>
 
       {showSlider && (
-        <div className="slider-track" style={{ '--track-color': col } as React.CSSProperties}>
+        <div className="slider-track" style={{ '--track-color': col } as CSSProperties}>
           <div
             className="slider-fill"
             style={{
@@ -101,9 +115,11 @@ export function ParamControl({
           />
           <input
             type="range"
-            min={min} max={max} step={step}
+            min={min}
+            max={max}
+            step={step}
             value={value}
-            onChange={e => onChange(Number(e.target.value))}
+            onChange={(event) => onChange(Number(event.target.value))}
             className="slider-input"
           />
           <div
@@ -120,18 +136,18 @@ export function ParamControl({
   )
 }
 
-// ── Results panel ─────────────────────────────────────────────────────────────
 interface ResultsProps {
   rows: { label: string; value: string; color?: Color }[]
 }
+
 export function ResultsPanel({ rows }: ResultsProps) {
   return (
     <div className="results-panel">
-      {rows.map((r, i) => (
-        <div key={i} className="result-row">
-          <span className="result-label">{r.label}</span>
-          <span className="result-val" style={{ color: r.color ? COLOR_MAP[r.color] : '#ffc832' }}>
-            {r.value}
+      {rows.map((row, index) => (
+        <div key={index} className="result-row">
+          <span className="result-label">{row.label}</span>
+          <span className="result-val" style={{ color: row.color ? COLOR_MAP[row.color] : '#ffc832' }}>
+            {row.value}
           </span>
         </div>
       ))}
@@ -139,19 +155,23 @@ export function ResultsPanel({ rows }: ResultsProps) {
   )
 }
 
-// ── Formula box ───────────────────────────────────────────────────────────────
 export function FormulaBox({ title, lines }: { title?: string; lines: string[] }) {
   return (
     <div className="formula-box-v2">
       {title && <div className="formula-title">{title}</div>}
-      {lines.map((l, i) => <div key={i} className="formula-line">{l}</div>)}
+      {lines.map((line, index) => (
+        <div key={index} className="formula-line">{line}</div>
+      ))}
     </div>
   )
 }
 
-// ── Playback controls ─────────────────────────────────────────────────────────
 export function PlaybackControls({
-  paused, onToggle, onReset, speed, onSpeed
+  paused,
+  onToggle,
+  onReset,
+  speed,
+  onSpeed,
 }: {
   paused: boolean
   onToggle: () => void
@@ -161,7 +181,7 @@ export function PlaybackControls({
 }) {
   return (
     <div className="playback-bar">
-      <button onClick={onToggle} className="play-btn" title={paused ? 'Iniciar/reanudar animación' : 'Pausar animación'}>
+      <button onClick={onToggle} className="play-btn" title={paused ? 'Iniciar o reanudar animacion' : 'Pausar animacion'}>
         {paused ? (
           <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor">
             <polygon points="3,1 13,7 3,13" />
@@ -175,22 +195,27 @@ export function PlaybackControls({
         <span>{paused ? 'Play' : 'Pausa'}</span>
       </button>
 
-      <button onClick={onReset} className="reset-btn" title="Reiniciar simulación (partícula al origen, tiempo=0)">
+      <button onClick={onReset} className="reset-btn" title="Reiniciar simulacion">
         <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor">
-          <path d="M6 1a5 5 0 1 0 4.33 2.5L9 4a3.5 3.5 0 1 1-3-1.5V4l3-3-3-3v2A5 5 0 0 0 6 1z"/>
+          <path d="M6 1a5 5 0 1 0 4.33 2.5L9 4a3.5 3.5 0 1 1-3-1.5V4l3-3-3-3v2A5 5 0 0 0 6 1z" />
         </svg>
         Reset
       </button>
 
       <div className="speed-control">
-        <span className="text-xs text-gray-500 font-mono">vel</span>
-        {[0.25, 0.5, 1, 2, 4].map(s => (
-          <button key={s} onClick={() => onSpeed(s)}
+        <span className="text-xs font-mono text-gray-500">vel</span>
+        {[0.25, 0.5, 1, 2, 4].map((currentSpeed) => (
+          <button
+            key={currentSpeed}
+            onClick={() => onSpeed(currentSpeed)}
             className="speed-btn"
-            style={{ color: speed === s ? '#00f0ff' : '#4a6a8a',
-                     background: speed === s ? 'rgba(0,240,255,0.12)' : 'transparent' }}
-            title={`Velocidad de animación ×${s} (actual: ×${speed})`}>
-            {s}×
+            style={{
+              color: speed === currentSpeed ? '#00f0ff' : '#4a6a8a',
+              background: speed === currentSpeed ? 'rgba(0,240,255,0.12)' : 'transparent',
+            }}
+            title={`Velocidad de animacion x${currentSpeed}`}
+          >
+            {currentSpeed}x
           </button>
         ))}
       </div>
@@ -198,12 +223,11 @@ export function PlaybackControls({
   )
 }
 
-// ── Hint overlay for 3D ───────────────────────────────────────────────────────
 export function OrbitHint() {
   return (
     <div className="orbit-hint">
-      <span>🖱️ arrastrar rotar | Shift+🖱️ mover</span>
-      <span>⚲ scroll zoom | 📱 2 dedos mover</span>
+      <span>arrastrar = rotar | shift + arrastrar = mover</span>
+      <span>scroll = zoom | dos dedos = mover</span>
     </div>
   )
 }
