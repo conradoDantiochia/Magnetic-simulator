@@ -1,6 +1,6 @@
 'use client'
 
-import { type CSSProperties, useRef, useState } from 'react'
+import { type CSSProperties, type ReactNode, useRef, useState } from 'react'
 
 type Color = 'cyan' | 'gold' | 'rose' | 'green'
 
@@ -172,6 +172,61 @@ export function FormulaBox({ title, lines }: { title?: string; lines: string[] }
       {lines.map((line, index) => (
         <div key={index} className="formula-line">{line}</div>
       ))}
+    </div>
+  )
+}
+
+type SectionTone = 'inputs' | 'results' | 'neutral'
+
+const SECTION_BADGE: Record<SectionTone, string> = {
+  inputs: 'ENT',
+  results: 'RES',
+  neutral: 'INFO',
+}
+
+interface SimulationSectionProps {
+  label: string
+  title: string
+  description: string
+  tone?: SectionTone
+  children: ReactNode
+}
+
+export function SimulationSection({
+  label,
+  title,
+  description,
+  tone = 'neutral',
+  children,
+}: SimulationSectionProps) {
+  return (
+    <section className="sim-section-card" data-tone={tone}>
+      <div className="sim-section-head">
+        <div>
+          <div className="sim-section-kicker">{label}</div>
+          <h3 className="sim-section-title">{title}</h3>
+          <p className="sim-section-desc">{description}</p>
+        </div>
+        <div className="sim-section-icon" aria-hidden="true">
+          {SECTION_BADGE[tone]}
+        </div>
+      </div>
+
+      <div className="sim-section-body">{children}</div>
+    </section>
+  )
+}
+
+export function SectionHint({
+  children,
+  tone = 'neutral',
+}: {
+  children: ReactNode
+  tone?: SectionTone
+}) {
+  return (
+    <div className="sim-section-hint" data-tone={tone}>
+      {children}
     </div>
   )
 }
