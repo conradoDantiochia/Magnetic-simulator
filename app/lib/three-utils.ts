@@ -64,7 +64,7 @@ export class OrbitControls {
     on('wheel', el, (e) => { (e as WheelEvent).preventDefault(); this._spherical.radius=Math.max(this.minDistance, Math.min(this.maxDistance, this._spherical.radius*(1+(e as WheelEvent).deltaY*0.001))) }, { passive:false })
     let tx=0,ty=0
     let touchPanStartX = 0, touchPanStartY = 0
-    on('touchstart', el, (e) => {
+    on('touchstart', el, (e:Event) => {
       const te = e as TouchEvent
       if (te.touches.length === 1) {
         // Single finger: rotate
@@ -155,12 +155,23 @@ export function createArrow(
 }
 
 // ── Axes + labels ─────────────────────────────────────────────────────────────
-export function createAxes(size=3): THREE.Group {
+interface AxesOptions {
+  color?: number
+  labelColor?: string
+}
+
+export function createAxes(size=3, options: AxesOptions = {}): THREE.Group {
   const g = new THREE.Group()
-  const ax = [[new THREE.Vector3(1,0,0),0xff3344,'X'],[new THREE.Vector3(0,1,0),0x33ff66,'Y'],[new THREE.Vector3(0,0,1),0x3366ff,'Z']] as [THREE.Vector3,number,string][]
+  const sharedColor = options.color
+  const ax = [
+    [new THREE.Vector3(1,0,0), sharedColor ?? 0xff3344, 'X'],
+    [new THREE.Vector3(0,1,0), sharedColor ?? 0x33ff66, 'Y'],
+    [new THREE.Vector3(0,0,1), sharedColor ?? 0x3366ff, 'Z'],
+  ] as [THREE.Vector3,number,string][]
   ax.forEach(([d,c,t]) => {
     g.add(createArrow(d, new THREE.Vector3(), size, c, 0.1, 0.012))
-    const sp = makeSprite(t, `#${c.toString(16).padStart(6,'0')}`, 0.45)
+    const labelColor = options.labelColor ?? `#${c.toString(16).padStart(6,'0')}`
+    const sp = makeSprite(t, labelColor, 0.45)
     sp.position.copy(d.clone().multiplyScalar(size+0.4)); g.add(sp)
   })
   return g
@@ -172,7 +183,12 @@ export function createGrid(size=8,div=8) { return new THREE.GridHelper(size,div,
 // ── Scene setup ───────────────────────────────────────────────────────────────
 // canvas must be in DOM with a sized parent before calling this.
 // We walk up to find the nearest element with a real clientWidth.
-export function createScene(canvas: HTMLCanvasElement) {
+interface SceneOptions {
+  axes?: false | ({ size?: number } & AxesOptions)
+  grid?: boolean
+}
+
+export function createScene(canvas: HTMLCanvasElement, options: SceneOptions = {}) {
   // getBoundingClientRect is reliable even at mount time
   const rect = canvas.getBoundingClientRect()
   const W = rect.width  > 10 ? rect.width  : (canvas.parentElement?.getBoundingClientRect().width  || 800)
@@ -195,8 +211,13 @@ export function createScene(canvas: HTMLCanvasElement) {
 
   scene.add(new THREE.AmbientLight(0x334455, 3.5))
   const dl = new THREE.DirectionalLight(0xffffff, 1.5); dl.position.set(5, 10, 5); scene.add(dl)
-  scene.add(createAxes(3.2))
-  scene.add(createGrid(10, 10))
+  if (options.axes !== false) {
+    const axesOptions = typeof options.axes === 'object' ? options.axes : {}
+    scene.add(createAxes(axesOptions.size ?? 3.2, axesOptions))
+  }
+  if (options.grid !== false) {
+    scene.add(createGrid(10, 10))
+  }
 
   const controls = new OrbitControls(camera, canvas)
   return { renderer, scene, camera, controls }
