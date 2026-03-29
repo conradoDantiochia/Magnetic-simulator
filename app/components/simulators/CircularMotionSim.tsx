@@ -13,7 +13,15 @@ import {
   makeSprite,
   disposeGroup,
 } from '@/app/lib/three-utils'
-import { ParamControl, ResultsPanel, FormulaBox, PlaybackControls, OrbitHint } from '@/app/components/ParamControl'
+import {
+  ParamControl,
+  ResultsPanel,
+  FormulaBox,
+  PlaybackControls,
+  OrbitHint,
+  SimulationSection,
+  SectionHint,
+} from '@/app/components/ParamControl'
 import { circularMotion, ELECTRON_CHARGE, PROTON_MASS } from '@/app/lib/physics'
 
 const EXERCISE_PRESETS = [
@@ -67,6 +75,14 @@ export default function CircularMotionSim() {
 
   const result = circularMotion(q, m, v, B)
   const trajectoryLabel = Math.abs(q) > 0 && Math.abs(v) > 0 && Math.abs(B) > 0 ? 'circular uniforme' : 'rectilinea'
+  const resultRows = [
+    { label: 'trayectoria', value: trajectoryLabel, color: 'green' as const },
+    { label: 'q', value: `${q.toExponential(2)} C`, color: 'cyan' as const },
+    { label: 'F = |q|vB', value: `${result.F.toExponential(3)} N`, color: 'gold' as const },
+    { label: 'r = mv/(|q|B)', value: `${result.r.toExponential(3)} m`, color: 'cyan' as const },
+    { label: 'T', value: `${result.T.toExponential(3)} s`, color: 'rose' as const },
+    { label: 'f', value: `${result.f.toExponential(3)} Hz`, color: 'green' as const },
+  ]
 
   const screenRows = [
     { label: 'q', value: `${formatExp(q)} C`, color: 'var(--cyan)' },
@@ -208,86 +224,6 @@ export default function CircularMotionSim() {
     sceneRef.current.fLen = Math.max(0.35, Math.min(2.4, result.F / F_REF))
     sceneRef.current.sign = Math.sign(q) || 1
   }, [q, result.F])
-
-  const panel = (
-    <div style={{ padding: '10px 12px' }}>
-      <ParamControl
-        label="q"
-        value={q}
-        min={-3.2e-19}
-        max={3.2e-19}
-        step={1e-20}
-        onChange={setQ}
-        color="cyan"
-        unit="C"
-        formatDisplay={(value) => value.toExponential(2)}
-        showSlider={false}
-        tooltip="Carga electrica q. Negativa = electron; positiva = proton o ion. Cambia el sentido de giro."
-      />
-      <ParamControl
-        label="m"
-        value={m}
-        min={9.11e-31}
-        max={3e-26}
-        step={5e-29}
-        onChange={setM}
-        color="gold"
-        unit="kg"
-        formatDisplay={(value) => value.toExponential(2)}
-        showSlider={false}
-        tooltip="Masa de la particula. Si m aumenta, tambien aumentan el radio y el periodo."
-      />
-      <ParamControl
-        label="v"
-        value={v}
-        min={1e4}
-        max={5e7}
-        step={1e5}
-        onChange={setV}
-        color="rose"
-        unit="m/s"
-        formatDisplay={(value) => value.toExponential(2)}
-        showSlider={false}
-        tooltip="Velocidad inicial. Aumenta la fuerza magnetica y el radio r, pero no cambia el periodo T."
-      />
-      <ParamControl
-        label="B"
-        value={B}
-        min={1e-5}
-        max={5}
-        step={1e-4}
-        onChange={setB}
-        color="cyan"
-        unit="T"
-        formatDisplay={(value) => value.toExponential(2)}
-        showSlider={false}
-        tooltip="Campo magnetico uniforme. Si B aumenta, la orbita se cierra y la frecuencia crece."
-      />
-
-      <div style={{ marginTop: 8 }}>
-        <PlaybackControls
-          paused={paused}
-          onToggle={() => setPaused((prev) => !prev)}
-          onReset={() => sceneRef.current?.reset()}
-          speed={speed}
-          onSpeed={setSpeed}
-        />
-      </div>
-
-      <div style={{ marginTop: 8 }}>
-        <ResultsPanel
-          rows={[
-            { label: 'trayectoria', value: trajectoryLabel, color: 'green' },
-            { label: 'q', value: `${q.toExponential(2)} C`, color: 'cyan' },
-            { label: 'F = |q|vB', value: `${result.F.toExponential(3)} N`, color: 'gold' },
-            { label: 'r = mv/(|q|B)', value: `${result.r.toExponential(3)} m`, color: 'cyan' },
-            { label: 'T', value: `${result.T.toExponential(3)} s`, color: 'rose' },
-            { label: 'f', value: `${result.f.toExponential(3)} Hz`, color: 'green' },
-          ]}
-        />
-      </div>
-    </div>
-  )
 
   return (
     <div>
@@ -490,8 +426,91 @@ export default function CircularMotionSim() {
           )}
         </div>
 
-        <div style={{ width: '100%', background: 'rgba(4,9,18,0.97)', border: '1px solid var(--border2)', borderRadius: 10, overflow: 'hidden' }}>
-          {panel}
+        <div className="sim-panel-grid">
+          <SimulationSection
+            label="Entradas"
+            title="Parametros que modificas"
+            description="Estos valores alimentan la simulacion. Cada cambio actualiza la orbita y el sentido de giro."
+            tone="inputs"
+          >
+            <SectionHint tone="inputs">Ajusta q, m, v y B. Los controles de animacion quedan en esta misma zona porque no son resultados fisicos.</SectionHint>
+
+            <ParamControl
+              label="q"
+              value={q}
+              min={-3.2e-19}
+              max={3.2e-19}
+              step={1e-20}
+              onChange={setQ}
+              color="cyan"
+              unit="C"
+              formatDisplay={(value) => value.toExponential(2)}
+              showSlider={false}
+              tooltip="Carga electrica q. Negativa = electron; positiva = proton o ion. Cambia el sentido de giro."
+            />
+            <ParamControl
+              label="m"
+              value={m}
+              min={9.11e-31}
+              max={3e-26}
+              step={5e-29}
+              onChange={setM}
+              color="gold"
+              unit="kg"
+              formatDisplay={(value) => value.toExponential(2)}
+              showSlider={false}
+              tooltip="Masa de la particula. Si m aumenta, tambien aumentan el radio y el periodo."
+            />
+            <ParamControl
+              label="v"
+              value={v}
+              min={1e4}
+              max={5e7}
+              step={1e5}
+              onChange={setV}
+              color="rose"
+              unit="m/s"
+              formatDisplay={(value) => value.toExponential(2)}
+              showSlider={false}
+              tooltip="Velocidad inicial. Aumenta la fuerza magnetica y el radio r, pero no cambia el periodo T."
+            />
+            <ParamControl
+              label="B"
+              value={B}
+              min={1e-5}
+              max={5}
+              step={1e-4}
+              onChange={setB}
+              color="cyan"
+              unit="T"
+              formatDisplay={(value) => value.toExponential(2)}
+              showSlider={false}
+              tooltip="Campo magnetico uniforme. Si B aumenta, la orbita se cierra y la frecuencia crece."
+            />
+
+            <div style={{ marginTop: 10 }}>
+              <div className="section-label" style={{ marginTop: 0 }}>
+                Control de animacion
+              </div>
+              <PlaybackControls
+                paused={paused}
+                onToggle={() => setPaused((prev) => !prev)}
+                onReset={() => sceneRef.current?.reset()}
+                speed={speed}
+                onSpeed={setSpeed}
+              />
+            </div>
+          </SimulationSection>
+
+          <SimulationSection
+            label="Resultados"
+            title="Magnitudes calculadas"
+            description="Estas salidas se recalculan automaticamente a partir de las entradas actuales."
+            tone="results"
+          >
+            <SectionHint tone="results">La trayectoria, la fuerza, el radio, el periodo y la frecuencia se muestran aparte para que no se confundan con los datos de entrada.</SectionHint>
+            <ResultsPanel rows={resultRows} />
+          </SimulationSection>
         </div>
       </div>
     </div>

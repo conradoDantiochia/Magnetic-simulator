@@ -11,7 +11,15 @@ import {
   C,
   makeSprite,
 } from '@/app/lib/three-utils'
-import { ParamControl, ResultsPanel, FormulaBox, PlaybackControls, OrbitHint } from '@/app/components/ParamControl'
+import {
+  ParamControl,
+  ResultsPanel,
+  FormulaBox,
+  PlaybackControls,
+  OrbitHint,
+  SimulationSection,
+  SectionHint,
+} from '@/app/components/ParamControl'
 import { massSpectrometer, ELECTRON_CHARGE, PROTON_MASS } from '@/app/lib/physics'
 
 const EX7_MASS_FAC = 2.18e-26 / PROTON_MASS
@@ -215,6 +223,15 @@ export default function MassSpectrometerSim() {
     if (Math.abs(value) < 0.001 || Math.abs(value) >= 1e6) return value.toExponential(3)
     return value.toPrecision(5).replace(/\.?0+$/, '')
   }
+  const resultRows = [
+    { label: 'q', value: `${formatSignedScientific(q)} C`, color: 'rose' as const },
+    { label: 'm', value: `${m.toExponential(3)} kg`, color: 'cyan' as const },
+    { label: 'v = E / B', value: `${fmt(res.v)} m/s`, color: 'green' as const },
+    { label: 'r firmado = m v / (q B0)', value: `${fmt(res.rSigned)} m`, color: 'gold' as const },
+    { label: '|r|', value: `${fmt(res.r)} m`, color: 'cyan' as const },
+    { label: 'q / m', value: `${fmt(qOverM)} C/kg`, color: 'rose' as const },
+    { label: '|q| / m', value: `${fmt(res.qOverMAbs)} C/kg`, color: 'cyan' as const },
+  ]
   const screenRows = [
     { label: 'E', value: `${fmt(E)} V/m`, color: 'var(--rose)' },
     { label: 'B selector', value: `${fmt(Bsel)} T`, color: 'var(--gold)' },
@@ -840,132 +857,159 @@ export default function MassSpectrometerSim() {
           </div>
         </div>
 
-        <div style={{ width: '100%', background: 'rgba(4,9,18,0.97)', border: '1px solid var(--border2)', borderRadius: 10, padding: '10px 12px' }}>
-          <div style={{ marginBottom: 10 }}>
-            <div style={{ fontSize: 10, fontFamily: 'var(--font-mono)', color: 'var(--muted)', marginBottom: 5, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-              Carga de la particula
+        <div className="sim-panel-grid">
+          <SimulationSection
+            label="Entradas"
+            title="Campos y particula"
+            description="Aqui solo cambias los valores del selector, la camara, la carga, la masa y la animacion."
+            tone="inputs"
+          >
+            <SectionHint tone="inputs">Las magnitudes calculadas quedaron fuera de esta columna para separar claramente datos de entrada y resultados fisicos.</SectionHint>
+
+            <div style={{ marginBottom: 10 }}>
+              <div style={{ fontSize: 10, fontFamily: 'var(--font-mono)', color: 'var(--muted)', marginBottom: 5, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                Carga de la particula
+              </div>
+              <ParamControl
+                label="q"
+                value={qFac}
+                min={-20}
+                max={20}
+                step={1}
+                onChange={(value) => {
+                  setQFac(finiteValue(value, 0))
+                  ctxRef.current?.reset()
+                }}
+                color="rose"
+                unit="e"
+                formatDisplay={(value) => trimFixed(value, 3)}
+                showSlider={false}
+                tooltip="Carga en multiplos de e. Si q cambia de signo, cambia el sentido de la curvatura."
+              />
+            </div>
+
+            <div style={{ fontSize: 10, fontFamily: 'var(--font-mono)', color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 4 }}>
+              Selector de velocidades
             </div>
             <ParamControl
-              label="q"
-              value={qFac}
-              min={-20}
-              max={20}
-              step={1}
+              label="E"
+              value={E}
+              min={-10000}
+              max={10000}
+              step={50}
               onChange={(value) => {
-                setQFac(finiteValue(value, 0))
+                setE(finiteValue(value, 0))
                 ctxRef.current?.reset()
               }}
               color="rose"
-              unit="e"
-              formatDisplay={(value) => trimFixed(value, 3)}
+              unit="V/m"
               showSlider={false}
-              tooltip="Carga en multiplos de e. Si q cambia de signo, cambia el sentido de la curvatura."
+              tooltip="Campo electrico del selector. Su signo invierte la direccion del vector E y cambia el signo de v = E/B."
             />
-          </div>
-
-          <div style={{ fontSize: 10, fontFamily: 'var(--font-mono)', color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 4 }}>
-            Selector de velocidades
-          </div>
-          <ParamControl
-            label="E"
-            value={E}
-            min={-10000}
-            max={10000}
-            step={50}
+            <ParamControl
+              label="B selector"
+              value={Bsel}
+              min={-5}
+              max={5}
+              step={0.05}
               onChange={(value) => {
-              setE(finiteValue(value, 0))
-              ctxRef.current?.reset()
-            }}
-            color="rose"
-            unit="V/m"
-            showSlider={false}
-            tooltip="Campo electrico del selector. Su signo invierte la direccion del vector E y cambia el signo de v = E/B."
-          />
-          <ParamControl
-            label="B selector"
-            value={Bsel}
-            min={-5}
-            max={5}
-            step={0.05}
-              onChange={(value) => {
-              setBsel(finiteValue(value, 0))
-              ctxRef.current?.reset()
-            }}
-            color="gold"
-            unit="T"
-            showSlider={false}
-            tooltip="Campo magnetico del selector. Su signo invierte B y cambia el signo de la velocidad seleccionada."
-          />
-
-          <div style={{ margin: '6px 0 10px', padding: '6px 10px', borderRadius: 6, background: 'rgba(0,0,0,0.35)', border: '1px solid #1a3050', fontSize: 11, fontFamily: 'monospace', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ color: 'var(--muted)' }}>v seleccionada = E / B</span>
-            <span style={{ color: selectorPasses ? 'var(--green)' : 'var(--rose)', fontWeight: 700 }}>{fmt(res.v)} m/s</span>
-          </div>
-          <div style={{ margin: '0 0 10px', padding: '6px 10px', borderRadius: 6, background: 'rgba(0,0,0,0.28)', border: '1px solid rgba(255,255,255,0.08)', fontSize: 11, fontFamily: 'var(--font-mono)', color: 'var(--text)' }}>
-            {beamStatus}
-          </div>
-
-          <div style={{ fontSize: 10, fontFamily: 'var(--font-mono)', color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 4 }}>
-            Camara de deflexion
-          </div>
-          <ParamControl
-            label="B0 camara"
-            value={B0}
-            min={-5}
-            max={5}
-            step={0.05}
-              onChange={(value) => {
-              setB0(finiteValue(value, 0))
-              ctxRef.current?.reset()
-            }}
-            color="gold"
-            unit="T"
-            showSlider={false}
-            tooltip="Campo magnetico de la camara. Su signo invierte B0 y cambia el sentido de la curvatura."
-          />
-          <ParamControl
-            label="masa"
-            value={mFac}
-            min={1}
-            max={200}
-            step={1}
-              onChange={(value) => {
-              setMFac(positiveValue(value, 1))
-              ctxRef.current?.reset()
-            }}
-            color="cyan"
-            unit="mp"
-            formatDisplay={(value) => trimFixed(value, 4)}
-            showSlider={false}
-            tooltip="Masa en multiplos de la masa del proton. Si m aumenta, el radio tambien aumenta."
-          />
-
-          <div style={{ marginTop: 10 }}>
-            <PlaybackControls
-              paused={paused}
-              onToggle={() => setPaused((prev) => !prev)}
-              onReset={() => {
+                setBsel(finiteValue(value, 0))
                 ctxRef.current?.reset()
-                if (paused) setPaused(false)
               }}
-              speed={simSpeed}
-              onSpeed={setSimSpeed}
+              color="gold"
+              unit="T"
+              showSlider={false}
+              tooltip="Campo magnetico del selector. Su signo invierte B y cambia el signo de la velocidad seleccionada."
             />
-          </div>
 
-          <div style={{ marginTop: 10 }}>
-            <ResultsPanel
-              rows={[
-                { label: 'q', value: `${formatSignedScientific(q)} C`, color: 'rose' },
-                { label: 'm', value: `${m.toExponential(3)} kg`, color: 'cyan' },
-                { label: 'v = E / B', value: `${fmt(res.v)} m/s`, color: 'green' },
-                { label: 'r firmado = m v / (q B0)', value: `${fmt(res.rSigned)} m`, color: 'gold' },
-                { label: '|r|', value: `${fmt(res.r)} m`, color: 'cyan' },
-                { label: 'q / m', value: `${fmt(qOverM)} C/kg`, color: 'rose' },
-                { label: '|q| / m', value: `${fmt(res.qOverMAbs)} C/kg`, color: 'cyan' },
-              ]}
+            <div style={{ fontSize: 10, fontFamily: 'var(--font-mono)', color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 4 }}>
+              Camara de deflexion
+            </div>
+            <ParamControl
+              label="B0 camara"
+              value={B0}
+              min={-5}
+              max={5}
+              step={0.05}
+              onChange={(value) => {
+                setB0(finiteValue(value, 0))
+                ctxRef.current?.reset()
+              }}
+              color="gold"
+              unit="T"
+              showSlider={false}
+              tooltip="Campo magnetico de la camara. Su signo invierte B0 y cambia el sentido de la curvatura."
             />
-          </div>
+            <ParamControl
+              label="masa"
+              value={mFac}
+              min={1}
+              max={200}
+              step={1}
+              onChange={(value) => {
+                setMFac(positiveValue(value, 1))
+                ctxRef.current?.reset()
+              }}
+              color="cyan"
+              unit="mp"
+              formatDisplay={(value) => trimFixed(value, 4)}
+              showSlider={false}
+              tooltip="Masa en multiplos de la masa del proton. Si m aumenta, el radio tambien aumenta."
+            />
+
+            <div style={{ marginTop: 10 }}>
+              <div className="section-label" style={{ marginTop: 0 }}>
+                Control de animacion
+              </div>
+              <PlaybackControls
+                paused={paused}
+                onToggle={() => setPaused((prev) => !prev)}
+                onReset={() => {
+                  ctxRef.current?.reset()
+                  if (paused) setPaused(false)
+                }}
+                speed={simSpeed}
+                onSpeed={setSimSpeed}
+              />
+            </div>
+          </SimulationSection>
+
+          <SimulationSection
+            label="Resultados"
+            title="Salida del espectrometro"
+            description="Esta columna muestra solo magnitudes derivadas y el estado del haz para la configuracion actual."
+            tone="results"
+          >
+            <SectionHint tone="results">v = E / B, el radio, q/m y el estado del selector se calculan automaticamente con las entradas actuales.</SectionHint>
+
+            <div style={{ marginBottom: 10, padding: '6px 10px', borderRadius: 6, background: 'rgba(0,0,0,0.35)', border: '1px solid #1a3050', fontSize: 11, fontFamily: 'monospace', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ color: 'var(--muted)' }}>v seleccionada = E / B</span>
+              <span style={{ color: selectorPasses ? 'var(--green)' : 'var(--rose)', fontWeight: 700 }}>{fmt(res.v)} m/s</span>
+            </div>
+            <div style={{ margin: '0 0 10px', padding: '6px 10px', borderRadius: 6, background: 'rgba(0,0,0,0.28)', border: '1px solid rgba(255,255,255,0.08)', fontSize: 11, fontFamily: 'var(--font-mono)', color: 'var(--text)' }}>
+              {beamStatus}
+            </div>
+
+            <ResultsPanel rows={resultRows} />
+
+            <div
+              style={{
+                marginTop: 10,
+                padding: '10px 12px',
+                borderRadius: 10,
+                background: 'rgba(255,255,255,0.03)',
+                border: '1px solid rgba(255,255,255,0.08)',
+                fontFamily: 'var(--font-mono)',
+                fontSize: 11,
+                lineHeight: 1.8,
+                color: 'var(--text)',
+              }}
+            >
+              <div style={{ color: 'var(--cyan)', marginBottom: 4 }}>Estado actual</div>
+              <div>Trayectoria: <span style={{ color: chargeColor, fontWeight: 700 }}>{bendText}</span></div>
+              <div>Compatibilidad del selector: <span style={{ color: selectorPasses ? 'var(--green)' : 'var(--rose)', fontWeight: 700 }}>{selectorPasses ? 'pasa recto' : 'no pasa recto'}</span></div>
+            </div>
+          </SimulationSection>
         </div>
       </div>
     </div>

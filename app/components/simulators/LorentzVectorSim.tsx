@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import * as THREE from 'three'
 import { createScene, handleResize, createArrow, C, disposeGroup, makeSprite } from '@/app/lib/three-utils'
-import { ParamControl, ResultsPanel, FormulaBox, OrbitHint } from '@/app/components/ParamControl'
+import { ParamControl, ResultsPanel, FormulaBox, OrbitHint, SimulationSection, SectionHint } from '@/app/components/ParamControl'
 import { vec3, cross, scale, magnitude, add, ELECTRON_CHARGE, Vec3 } from '@/app/lib/physics'
 
 interface LorentzPreset {
@@ -123,6 +123,17 @@ export default function LorentzVectorSim() {
   const angleXYdeg = Math.atan2(FV.y, FV.x) * 180 / Math.PI
   const angleXYsex = toSexagesimal(angleXYdeg)
   const fmt = (value: Vec3) => `(${value.x.toExponential(2)}, ${value.y.toExponential(2)}, ${value.z.toExponential(2)})`
+  const resultRows = [
+    { label: 'v', value: fmt(vV), color: 'cyan' as const },
+    { label: 'B', value: fmt(BV), color: 'rose' as const },
+    { label: 'E', value: fmt(EV), color: 'cyan' as const },
+    { label: 'v x B', value: fmt(vxB), color: 'gold' as const },
+    { label: 'Fm = q(v x B)', value: fmt(Fm), color: 'rose' as const },
+    { label: 'Fe = qE', value: fmt(Fe), color: 'cyan' as const },
+    { label: 'F total', value: fmt(FV), color: 'gold' as const },
+    { label: '|F|', value: `${Fmag.toExponential(3)} N`, color: 'green' as const },
+    { label: 'angulo en XY', value: `${angleXYdeg.toFixed(2)} deg (${angleXYsex})`, color: 'cyan' as const },
+  ]
   const screenRows = [
     { label: 'q/e', value: q.toFixed(0), color: 'var(--rose)' },
     { label: 'v', value: fmt(vV), color: 'var(--cyan)' },
@@ -458,8 +469,15 @@ export default function LorentzVectorSim() {
         )}
       </div>
 
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, marginTop: 10 }}>
-        <div style={{ flex: '1 1 300px' }}>
+      <div className="sim-panel-grid" style={{ marginTop: 10 }}>
+        <SimulationSection
+          label="Entradas"
+          title="Datos que cargas"
+          description="Definis la carga y las componentes de v, B y E. Esta columna solo contiene valores de entrada."
+          tone="inputs"
+        >
+          <SectionHint tone="inputs">Primero ajustas las variables del problema. El visor y la columna de resultados se recalculan con estas entradas.</SectionHint>
+
           <div style={{ fontSize: 10, fontFamily: 'var(--font-mono)', color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 4 }}>
             1. Carga
           </div>
@@ -494,22 +512,17 @@ export default function LorentzVectorSim() {
           <ParamControl label="Ex (N/C)" value={safeNumber(Ex)} min={-20} max={20} step={0.5} onChange={(value) => setEx(safeNumber(value))} color="gold" tooltip="Componente x del campo electrico." />
           <ParamControl label="Ey (N/C)" value={safeNumber(Ey)} min={-20} max={20} step={0.5} onChange={(value) => setEy(safeNumber(value))} color="gold" tooltip="Componente y del campo electrico." />
           <ParamControl label="Ez (N/C)" value={safeNumber(Ez)} min={-20} max={20} step={0.5} onChange={(value) => setEz(safeNumber(value))} color="gold" tooltip="Componente z del campo electrico." />
-        </div>
+        </SimulationSection>
 
-        <div style={{ flex: '1 1 280px' }}>
-          <ResultsPanel
-            rows={[
-              { label: 'v', value: fmt(vV), color: 'cyan' },
-              { label: 'B', value: fmt(BV), color: 'rose' },
-              { label: 'E', value: fmt(EV), color: 'cyan' },
-              { label: 'v x B', value: fmt(vxB), color: 'gold' },
-              { label: 'Fm = q(v x B)', value: fmt(Fm), color: 'rose' },
-              { label: 'Fe = qE', value: fmt(Fe), color: 'cyan' },
-              { label: 'F total', value: fmt(FV), color: 'gold' },
-              { label: '|F|', value: `${Fmag.toExponential(3)} N`, color: 'green' },
-              { label: 'angulo en XY', value: `${angleXYdeg.toFixed(2)} deg (${angleXYsex})`, color: 'cyan' },
-            ]}
-          />
+        <SimulationSection
+          label="Resultados"
+          title="Fuerzas y lectura vectorial"
+          description="Esta columna muestra solo salidas calculadas: productos vectoriales, fuerzas y angulos."
+          tone="results"
+        >
+          <SectionHint tone="results">Usa esta zona para leer lo que produce la simulacion. Si cambias una entrada, estos valores cambian solos.</SectionHint>
+
+          <ResultsPanel rows={resultRows} />
 
           <div
             style={{
@@ -530,7 +543,7 @@ export default function LorentzVectorSim() {
             <div>Si v es paralela a B, entonces v x B = 0.</div>
             <div>Si Fe y Fm son opuestas e iguales, la fuerza total se anula.</div>
           </div>
-        </div>
+        </SimulationSection>
       </div>
     </div>
   )
