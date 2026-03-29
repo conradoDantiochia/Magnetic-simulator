@@ -48,13 +48,22 @@ export function ParamControl({
       useGrouping: false,
       maximumFractionDigits: 20,
     })
-    return display.replace(/\.?0+$/, '')
+    if (!display.includes('.')) return display
+    return display.replace(/0+$/, '').replace(/\.$/, '')
   }
 
   const display = formatDisplay ? formatDisplay(value) : formatPlain(value)
 
   const commitRaw = () => {
-    const parsed = parseFloat(raw)
+    const trimmed = raw.trim()
+    if (trimmed === '') {
+      onChange(0)
+      setRaw('0')
+      setEditing(false)
+      return
+    }
+
+    const parsed = parseFloat(trimmed)
     if (!Number.isNaN(parsed)) {
       onChange(parsed)
       setEditing(false)
@@ -79,6 +88,7 @@ export function ParamControl({
             ref={inputRef}
             type="text"
             defaultValue={formatPlain(value)}
+            placeholder="0"
             className="manual-input"
             style={{ color: col, borderColor: col, width: 110 }}
             onChange={(event) => setRaw(event.target.value)}
