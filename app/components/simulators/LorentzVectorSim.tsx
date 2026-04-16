@@ -25,29 +25,9 @@ interface LorentzPreset {
 
 const EXERCISE_PRESETS: LorentzPreset[] = [
   {
-    name: 'Ej 2',
-    note: 'Con el electron moviendose en +x y la desviacion en +y, el campo magnetico debe apuntar en +z.',
-    values: { q: -1, vx: 8e5, vy: 0, vz: 0, Bx: 0, By: 0, Bz: 2e-5, Ex: 0, Ey: 0, Ez: 0 },
-  },
-  {
     name: 'Ej 3',
     note: 'Particula alfa: v al norte (+y), B al este (+x). Debe dar F = -1.216e-13 k N y |F| = 1.216e-13 N.',
     values: { q: 2, vx: 0, vy: 3.8e5, vz: 0, Bx: 1.0, By: 0, Bz: 0, Ex: 0, Ey: 0, Ez: 0 },
-  },
-  {
-    name: 'Ej 4',
-    note: 'Electron en B = (4i - 11j) T y v = (-2i + 3j - 7k) m/s. Debe dar F = (1.232e-17 i + 4.48e-18 j - 1.60e-18 k) N.',
-    values: { q: -1, vx: -2, vy: 3, vz: -7, Bx: 4, By: -11, Bz: 0, Ex: 0, Ey: 0, Ez: 0 },
-  },
-  {
-    name: 'Ej 5',
-    note: 'Proton hacia el oeste (-x) en un campo terrestre hacia el sur (-y). La fuerza queda en +z y su modulo es 4.96e-17 N.',
-    values: { q: 1, vx: -6.2e6, vy: 0, vz: 0, Bx: 0, By: -0.5e-4, Bz: 0, Ex: 0, Ey: 0, Ez: 0 },
-  },
-  {
-    name: 'Ej 6',
-    note: 'Con q = 3.2e-19 C = 2e, debe dar F = (3.52e-18 i - 1.60e-18 j + 0k) N y un angulo XY de -24.44 deg.',
-    values: { q: 2, vx: 2, vy: 3, vz: -1, Bx: 2, By: 4, Bz: 1, Ex: 4, Ey: -1, Ez: -2 },
   },
 ]
 
@@ -74,7 +54,7 @@ const GUIDED_PRESETS: LorentzPreset[] = [
   },
 ]
 
-const DEFAULT_NOTE = 'Usa los botones Ej 2 a Ej 6 para cargar directamente los problemas vectoriales de la guia.'
+const DEFAULT_NOTE = 'Usa el boton Ej 3 para cargar directamente el problema vectorial de la guia.'
 
 function toSexagesimal(angle: number) {
   const sign = angle < 0 ? '-' : ''
@@ -89,6 +69,41 @@ function toSexagesimal(angle: number) {
 function safeNumber(value: number) {
   if (value === undefined || value === null || Number.isNaN(value)) return 0
   return value
+}
+
+type VectorFamily = 'inputs' | 'forces'
+
+interface VisualVector {
+  v: Vec3
+  color: number
+  lbl: string
+  family: VectorFamily
+  labelOffset: Vec3
+}
+
+const VECTOR_LENGTH_RANGE: Record<VectorFamily, { min: number; max: number }> = {
+  inputs: { min: 1.1, max: 3.1 },
+  forces: { min: 1.4, max: 3.6 },
+}
+
+function getVisualVectorLength(mag: number, familyMagnitudes: number[], family: VectorFamily) {
+  if (mag <= 0) return 0
+
+  const { min, max } = VECTOR_LENGTH_RANGE[family]
+  const nonZeroMagnitudes = familyMagnitudes.filter((value) => value > 0)
+  if (!nonZeroMagnitudes.length) return 0
+  if (nonZeroMagnitudes.length === 1) return max
+
+  const minMag = Math.min(...nonZeroMagnitudes)
+  const maxMag = Math.max(...nonZeroMagnitudes)
+  if (maxMag <= minMag * 1.000001) return max
+
+  const logSpan = Math.log10(maxMag) - Math.log10(minMag)
+  if (logSpan <= 0) return max
+
+  const normalized = (Math.log10(mag) - Math.log10(minMag)) / logSpan
+  const clamped = Math.min(1, Math.max(0, normalized))
+  return min + (max - min) * clamped
 }
 
 export default function LorentzVectorSim() {
@@ -187,28 +202,37 @@ export default function LorentzVectorSim() {
       .filter((child: THREE.Object3D) => child.userData?.isVec)
       .forEach((child: THREE.Object3D) => disposeGroup(scene, child))
 
-    const vecs = [
-      { v: vV, color: C.cyan, lbl: 'v' },
-      { v: BV, color: C.rose, lbl: 'B' },
-      { v: EV, color: C.blue, lbl: 'E' },
-      { v: Fm, color: 0xff4444, lbl: 'Fm' },
-      { v: Fe, color: 0x4488ff, lbl: 'Fe' },
-      { v: FV, color: C.gold, lbl: 'F' },
+    const vecs: VisualVector[] = [
+      { v: vV, color: C.cyan, lbl: 'v', family: 'inputs', labelOffset: vec3(-0.18, 0.18, 0) },
+      { v: BV, color: C.rose, lbl: 'B', family: 'inputs', labelOffset: vec3(0.18, 0.18, 0) },
+      { v: EV, color: C.blue, lbl: 'E', family: 'inputs', labelOffset: vec3(0, 0.18, 0.18) },
+      { v: Fm, color: 0xff4444, lbl: 'Fm', family: 'forces', labelOffset: vec3(-0.2, -0.18, 0.14) },
+      { v: Fe, color: 0x4488ff, lbl: 'Fe', family: 'forces', labelOffset: vec3(0.2, -0.18, 0.14) },
+      { v: FV, color: C.gold, lbl: 'F', family: 'forces', labelOffset: vec3(0, -0.2, -0.18) },
     ]
 
-    const maxMag = Math.max(...vecs.map((entry) => magnitude(entry.v)), 0.001)
+    const familyMagnitudes = {
+      inputs: vecs.filter((entry) => entry.family === 'inputs').map((entry) => magnitude(entry.v)),
+      forces: vecs.filter((entry) => entry.family === 'forces').map((entry) => magnitude(entry.v)),
+    }
 
-    vecs.forEach(({ v, color, lbl }) => {
+    vecs.forEach(({ v, color, lbl, family, labelOffset }) => {
       const mag = magnitude(v)
-      if (mag < 0.0001) return
+      if (mag <= 0) return
 
-      const len = 3.5 * (mag / maxMag)
+      const len = getVisualVectorLength(mag, familyMagnitudes[family], family)
       const dir = new THREE.Vector3(v.x, v.y, v.z).normalize()
-      const arrow = createArrow(dir, new THREE.Vector3(0, 0, 0), len, color, 0.18, 0.033)
+      const origin = new THREE.Vector3(0, 0, 0)
+      const arrow = createArrow(dir, origin, len, color, 0.18, 0.033)
       arrow.userData.isVec = true
 
       const sprite = makeSprite(lbl, `#${color.toString(16).padStart(6, '0')}`, 0.5)
-      sprite.position.copy(dir.clone().multiplyScalar(len + 0.4))
+      sprite.position.copy(
+        origin
+          .clone()
+          .addScaledVector(dir, len + 0.4)
+          .add(new THREE.Vector3(labelOffset.x, labelOffset.y, labelOffset.z))
+      )
       sprite.userData.isVec = true
 
       scene.add(arrow)
