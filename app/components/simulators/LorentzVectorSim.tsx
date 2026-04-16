@@ -91,6 +91,41 @@ function safeNumber(value: number) {
   return value
 }
 
+type VectorFamily = 'inputs' | 'forces'
+
+interface VisualVector {
+  v: Vec3
+  color: number
+  lbl: string
+  family: VectorFamily
+  labelOffset: Vec3
+}
+
+const VECTOR_LENGTH_RANGE: Record<VectorFamily, { min: number; max: number }> = {
+  inputs: { min: 1.1, max: 3.1 },
+  forces: { min: 1.4, max: 3.6 },
+}
+
+function getVisualVectorLength(mag: number, familyMagnitudes: number[], family: VectorFamily) {
+  if (mag <= 0) return 0
+
+  const { min, max } = VECTOR_LENGTH_RANGE[family]
+  const nonZeroMagnitudes = familyMagnitudes.filter((value) => value > 0)
+  if (!nonZeroMagnitudes.length) return 0
+  if (nonZeroMagnitudes.length === 1) return max
+
+  const minMag = Math.min(...nonZeroMagnitudes)
+  const maxMag = Math.max(...nonZeroMagnitudes)
+  if (maxMag <= minMag * 1.000001) return max
+
+  const logSpan = Math.log10(maxMag) - Math.log10(minMag)
+  if (logSpan <= 0) return max
+
+  const normalized = (Math.log10(mag) - Math.log10(minMag)) / logSpan
+  const clamped = Math.min(1, Math.max(0, normalized))
+  return min + (max - min) * clamped
+}
+
 export default function LorentzVectorSim() {
   const mountRef = useRef<HTMLDivElement>(null)
   const sceneRef = useRef<any>(null)
@@ -187,28 +222,37 @@ export default function LorentzVectorSim() {
       .filter((child: THREE.Object3D) => child.userData?.isVec)
       .forEach((child: THREE.Object3D) => disposeGroup(scene, child))
 
-    const vecs = [
-      { v: vV, color: C.cyan, lbl: 'v' },
-      { v: BV, color: C.rose, lbl: 'B' },
-      { v: EV, color: C.blue, lbl: 'E' },
-      { v: Fm, color: 0xff4444, lbl: 'Fm' },
-      { v: Fe, color: 0x4488ff, lbl: 'Fe' },
-      { v: FV, color: C.gold, lbl: 'F' },
+    const vecs: VisualVector[] = [
+      { v: vV, color: C.cyan, lbl: 'v', family: 'inputs', labelOffset: vec3(-0.18, 0.18, 0) },
+      { v: BV, color: C.rose, lbl: 'B', family: 'inputs', labelOffset: vec3(0.18, 0.18, 0) },
+      { v: EV, color: C.blue, lbl: 'E', family: 'inputs', labelOffset: vec3(0, 0.18, 0.18) },
+      { v: Fm, color: 0xff4444, lbl: 'Fm', family: 'forces', labelOffset: vec3(-0.2, -0.18, 0.14) },
+      { v: Fe, color: 0x4488ff, lbl: 'Fe', family: 'forces', labelOffset: vec3(0.2, -0.18, 0.14) },
+      { v: FV, color: C.gold, lbl: 'F', family: 'forces', labelOffset: vec3(0, -0.2, -0.18) },
     ]
 
-    const maxMag = Math.max(...vecs.map((entry) => magnitude(entry.v)), 0.001)
+    const familyMagnitudes = {
+      inputs: vecs.filter((entry) => entry.family === 'inputs').map((entry) => magnitude(entry.v)),
+      forces: vecs.filter((entry) => entry.family === 'forces').map((entry) => magnitude(entry.v)),
+    }
 
-    vecs.forEach(({ v, color, lbl }) => {
+    vecs.forEach(({ v, color, lbl, family, labelOffset }) => {
       const mag = magnitude(v)
-      if (mag < 0.0001) return
+      if (mag <= 0) return
 
-      const len = 3.5 * (mag / maxMag)
+      const len = getVisualVectorLength(mag, familyMagnitudes[family], family)
       const dir = new THREE.Vector3(v.x, v.y, v.z).normalize()
-      const arrow = createArrow(dir, new THREE.Vector3(0, 0, 0), len, color, 0.18, 0.033)
+      const origin = new THREE.Vector3(0, 0, 0)
+      const arrow = createArrow(dir, origin, len, color, 0.18, 0.033)
       arrow.userData.isVec = true
 
       const sprite = makeSprite(lbl, `#${color.toString(16).padStart(6, '0')}`, 0.5)
-      sprite.position.copy(dir.clone().multiplyScalar(len + 0.4))
+      sprite.position.copy(
+        origin
+          .clone()
+          .addScaledVector(dir, len + 0.4)
+          .add(new THREE.Vector3(labelOffset.x, labelOffset.y, labelOffset.z))
+      )
       sprite.userData.isVec = true
 
       scene.add(arrow)

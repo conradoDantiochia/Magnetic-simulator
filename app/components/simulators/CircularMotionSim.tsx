@@ -55,12 +55,36 @@ const DEFAULT_PRESET = EXERCISE_PRESETS[2]
 
 const ORBIT_R = 2.6
 const F_REF = ELECTRON_CHARGE * 6.2e6 * 0.5e-4
+const FIELD_HALF_EXTENT = 4.5
+const FIELD_SPACING = 1.2
+const FIELD_ARROW_LENGTH = 0.55
+const B_ARROW_LENGTH = 2.0
+const B_LABEL_OFFSET = 2.4
 
 const formatExp = (value: number, digits = 2) => value.toExponential(digits)
+const getFieldDirection = (field: number) => new THREE.Vector3(0, Math.sign(field), 0)
+const getTurnSign = (charge: number, velocity: number, field: number) => Math.sign(charge * velocity * field)
+const getVelocitySign = (turnSign: number, velocity: number) => turnSign || Math.sign(velocity) || 1
+
+type CircularSceneState = {
+  paused: boolean
+  speed: number
+  angle: number
+  turnSign: number
+  velocitySign: number
+  vLen: number
+  fLen: number
+  fieldDir: THREE.Vector3
+  fieldArrows: THREE.Group | null
+  bArrow: THREE.Group | null
+  bLabel: THREE.Sprite
+  updateField: (field: number, anchor?: THREE.Vector3) => void
+  reset: () => void
+}
 
 export default function CircularMotionSim() {
   const mountRef = useRef<HTMLDivElement>(null)
-  const sceneRef = useRef<any>(null)
+  const sceneRef = useRef<CircularSceneState | null>(null)
 
   const [q, setQ] = useState(DEFAULT_PRESET.q)
   const [m, setM] = useState(DEFAULT_PRESET.m)
@@ -78,8 +102,8 @@ export default function CircularMotionSim() {
   const resultRows = [
     { label: 'trayectoria', value: trajectoryLabel, color: 'green' as const },
     { label: 'q', value: `${q.toExponential(2)} C`, color: 'cyan' as const },
-    { label: 'F = |q|vB', value: `${result.F.toExponential(3)} N`, color: 'gold' as const },
-    { label: 'r = mv/(|q|B)', value: `${result.r.toExponential(3)} m`, color: 'cyan' as const },
+    { label: '|F| = |q||v||B|', value: `${result.F.toExponential(3)} N`, color: 'gold' as const },
+    { label: 'r = m|v|/(|q||B|)', value: `${result.r.toExponential(3)} m`, color: 'cyan' as const },
     { label: 'T', value: `${result.T.toExponential(3)} s`, color: 'rose' as const },
     { label: 'f', value: `${result.f.toExponential(3)} Hz`, color: 'green' as const },
   ]
@@ -123,29 +147,61 @@ export default function CircularMotionSim() {
     ring.rotation.x = Math.PI / 2
     scene.add(ring)
 
-    scene.add(createFieldArrows(new THREE.Vector3(0, 1, 0), new THREE.Vector3(0, 0, 0), 4.5, 1.2, 0x1a4060, 0.55))
-
-    const bArrow = createArrow(new THREE.Vector3(0, 1, 0), new THREE.Vector3(0, 0, 0), 2.0, C.rose, 0.15, 0.032)
     const bLabel = makeSprite('B', '#ff3d6b', 0.5)
-    scene.add(bArrow, bLabel)
+    scene.add(bLabel)
 
     let arrowV: THREE.Group | null = null
     let arrowF: THREE.Group | null = null
     let lblV: THREE.Sprite | null = null
     let lblF: THREE.Sprite | null = null
 
-    sceneRef.current = {
+    const sceneState: CircularSceneState = {
       paused: false,
       speed: 1,
       angle: 0,
-      sign: Math.sign(q) || 1,
+      turnSign: getTurnSign(q, v, B),
+      velocitySign: getVelocitySign(getTurnSign(q, v, B), v),
       vLen: 1.6,
       fLen: 1.0,
+      fieldDir: getFieldDirection(B),
+      fieldArrows: null,
+      bArrow: null,
+      bLabel,
+      updateField: (field, anchor = particle.position.clone()) => {
+        const fieldDir = getFieldDirection(field)
+        const hasField = fieldDir.lengthSq() > 0
+
+        sceneState.fieldDir.copy(fieldDir)
+        disposeGroup(scene, sceneState.fieldArrows)
+        disposeGroup(scene, sceneState.bArrow)
+
+        sceneState.fieldArrows = hasField
+          ? createFieldArrows(
+              fieldDir,
+              new THREE.Vector3(0, 0, 0),
+              FIELD_HALF_EXTENT,
+              FIELD_SPACING,
+              0x1a4060,
+              FIELD_ARROW_LENGTH
+            )
+          : null
+        sceneState.bArrow = hasField ? createArrow(fieldDir, anchor.clone(), B_ARROW_LENGTH, C.rose, 0.15, 0.032) : null
+
+        if (sceneState.fieldArrows) scene.add(sceneState.fieldArrows)
+        if (sceneState.bArrow) scene.add(sceneState.bArrow)
+
+        sceneState.bLabel.visible = hasField
+        sceneState.bLabel.position.copy(
+          hasField ? anchor.clone().addScaledVector(fieldDir, B_LABEL_OFFSET) : anchor.clone()
+        )
+      },
       reset: () => {
-        sceneRef.current.angle = 0
+        sceneState.angle = 0
         trail.clear()
       },
     }
+    sceneRef.current = sceneState
+    sceneState.updateField(B)
 
     let lastTime = performance.now()
     let animId = 0
@@ -161,8 +217,8 @@ export default function CircularMotionSim() {
       const dt = Math.min((now - lastTime) / 1000, 0.05) * sceneState.speed
       lastTime = now
 
-      if (!sceneState.paused) {
-        sceneState.angle += 2 * Math.PI * 0.28 * dt * sceneState.sign
+      if (!sceneState.paused && sceneState.turnSign !== 0) {
+        sceneState.angle += 2 * Math.PI * 0.28 * dt * sceneState.turnSign
       }
 
       const angle = sceneState.angle
@@ -170,7 +226,7 @@ export default function CircularMotionSim() {
       ptLight.position.copy(particle.position)
       trail.push(particle.position)
 
-      const velDir = new THREE.Vector3(-Math.sin(angle), 0, Math.cos(angle)).multiplyScalar(sceneState.sign)
+      const velDir = new THREE.Vector3(-Math.sin(angle), 0, Math.cos(angle)).multiplyScalar(sceneState.velocitySign)
       const frcDir = new THREE.Vector3(-Math.cos(angle), 0, -Math.sin(angle))
 
       disposeGroup(scene, arrowV)
@@ -185,8 +241,10 @@ export default function CircularMotionSim() {
       lblV.position.copy(particle.position.clone().addScaledVector(velDir, sceneState.vLen + 0.4))
       lblF.position.copy(particle.position.clone().addScaledVector(frcDir, sceneState.fLen + 0.4))
 
-      bArrow.position.copy(particle.position)
-      bLabel.position.set(particle.position.x, particle.position.y + 2.4, particle.position.z)
+      if (sceneState.bArrow) sceneState.bArrow.position.copy(particle.position)
+      sceneState.bLabel.position.copy(
+        particle.position.clone().addScaledVector(sceneState.fieldDir, sceneState.fieldDir.lengthSq() > 0 ? B_LABEL_OFFSET : 0)
+      )
       scene.add(arrowV, arrowF, lblV, lblF)
 
       controls.update()
@@ -203,6 +261,9 @@ export default function CircularMotionSim() {
       cancelAnimationFrame(animId)
       controls.dispose()
       trail.dispose()
+      disposeGroup(scene, sceneState.fieldArrows)
+      disposeGroup(scene, sceneState.bArrow)
+      scene.remove(sceneState.bLabel)
       renderer.dispose()
       ro.disconnect()
       mount.removeChild(canvas)
@@ -221,16 +282,21 @@ export default function CircularMotionSim() {
   useEffect(() => {
     if (!sceneRef.current) return
     sceneRef.current.vLen = 1.6
-    sceneRef.current.fLen = Math.max(0.35, Math.min(2.4, result.F / F_REF))
-    sceneRef.current.sign = Math.sign(q) || 1
-  }, [q, result.F])
+    sceneRef.current.fLen = result.F > 0 ? Math.max(0.35, Math.min(2.4, result.F / F_REF)) : 0
+    sceneRef.current.turnSign = getTurnSign(q, v, B)
+    sceneRef.current.velocitySign = getVelocitySign(sceneRef.current.turnSign, v)
+  }, [q, v, B, result.F])
+
+  useEffect(() => {
+    sceneRef.current?.updateField(B)
+  }, [B])
 
   return (
     <div>
       <FormulaBox
         title="Movimiento circular en B uniforme"
         lines={[
-          'F = q(v x B)   |   r = mv / (|q|B)   |   f = |q|B / (2*pi*m)',
+          'F = q(v x B)   |   |F| = |q||v||B|   |   r = m|v| / (|q||B|)',
           'Presets de la guia: Ej 1, Ej 3 y Ej 5. Los ejes blancos solo son referencia espacial.',
         ]}
       />
@@ -354,12 +420,12 @@ export default function CircularMotionSim() {
           }}
         >
           <div style={{ color: 'var(--cyan)', fontWeight: 700, marginBottom: 6 }}>Ecuaciones utilizadas</div>
-          <div><span style={{ color: 'var(--gold)' }}>1.</span> Fuerza magnetica: F = |q|vB</div>
-          <div><span style={{ color: 'var(--gold)' }}>2.</span> Radio de la orbita: r = mv / (|q|B)</div>
-          <div><span style={{ color: 'var(--gold)' }}>3.</span> Periodo: T = 2*pi*m / (|q|B)</div>
-          <div><span style={{ color: 'var(--gold)' }}>4.</span> Frecuencia ciclotronica: f = |q|B / (2*pi*m)</div>
+          <div><span style={{ color: 'var(--gold)' }}>1.</span> Modulo de la fuerza: |F| = |q||v||B|</div>
+          <div><span style={{ color: 'var(--gold)' }}>2.</span> Radio de la orbita: r = m|v| / (|q||B|)</div>
+          <div><span style={{ color: 'var(--gold)' }}>3.</span> Periodo: T = 2*pi*m / (|q||B|)</div>
+          <div><span style={{ color: 'var(--gold)' }}>4.</span> Frecuencia ciclotronica: f = |q||B| / (2*pi*m)</div>
           <div style={{ marginTop: 6, color: 'var(--muted)' }}>
-            La trayectoria es circular porque la fuerza magnetica es perpendicular a la velocidad. El periodo no depende de v, pero el radio si.
+            El signo de q, v y B se usa para orientar los vectores y el sentido de giro. El periodo no depende de v, pero el radio si depende de |v|.
           </div>
         </div>
       )}
@@ -464,7 +530,7 @@ export default function CircularMotionSim() {
             <ParamControl
               label="v"
               value={v}
-              min={1e4}
+              min={-5e7}
               max={5e7}
               step={1e5}
               onChange={setV}
@@ -472,12 +538,12 @@ export default function CircularMotionSim() {
               unit="m/s"
               formatDisplay={(value) => value.toExponential(2)}
               showSlider={false}
-              tooltip="Velocidad inicial. Aumenta la fuerza magnetica y el radio r, pero no cambia el periodo T."
+              tooltip="Velocidad inicial. Su modulo cambia F y r; su signo invierte el vector v y, en esta visualizacion, el sentido de giro."
             />
             <ParamControl
               label="B"
               value={B}
-              min={1e-5}
+              min={-5}
               max={5}
               step={1e-4}
               onChange={setB}
@@ -485,7 +551,7 @@ export default function CircularMotionSim() {
               unit="T"
               formatDisplay={(value) => value.toExponential(2)}
               showSlider={false}
-              tooltip="Campo magnetico uniforme. Si B aumenta, la orbita se cierra y la frecuencia crece."
+              tooltip="Campo magnetico uniforme. Su modulo cierra la orbita y su signo invierte la direccion del campo y el sentido de giro."
             />
 
             <div style={{ marginTop: 10 }}>
