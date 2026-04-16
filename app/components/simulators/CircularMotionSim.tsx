@@ -26,32 +26,16 @@ import { circularMotion, ELECTRON_CHARGE, PROTON_MASS } from '@/app/lib/physics'
 
 const EXERCISE_PRESETS = [
   {
-    name: 'Ej 1',
-    q: ELECTRON_CHARGE,
-    m: PROTON_MASS,
-    v: 2.5e6,
-    B: 0.8,
-    note: 'Caso base: carga positiva con v perpendicular a B. La trayectoria es circular y se caracteriza con F, r, T y f.',
-  },
-  {
-    name: 'Ej 3',
-    q: 2 * ELECTRON_CHARGE,
-    m: 4 * PROTON_MASS,
-    v: 3.8e5,
-    B: 1.0,
-    note: 'Particula alfa. La magnitud esperada es |F| = 1.216e-13 N. La direccion se analiza con la regla de la mano derecha.',
-  },
-  {
     name: 'Ej 5',
     q: ELECTRON_CHARGE,
     m: PROTON_MASS,
     v: 6.2e6,
-    B: 0.5e-4,
+    B: -0.5e-4,
     note: 'Proton en el campo terrestre. Debe dar |F| = 4.96e-17 N y r = 1.294e3 m.',
   },
 ]
 
-const DEFAULT_PRESET = EXERCISE_PRESETS[2]
+const DEFAULT_PRESET = EXERCISE_PRESETS[0]
 
 const ORBIT_R = 2.6
 const F_REF = ELECTRON_CHARGE * 6.2e6 * 0.5e-4
@@ -297,7 +281,7 @@ export default function CircularMotionSim() {
         title="Movimiento circular en B uniforme"
         lines={[
           'F = q(v x B)   |   |F| = |q||v||B|   |   r = m|v| / (|q||B|)',
-          'Presets de la guia: Ej 1, Ej 3 y Ej 5. Los ejes blancos solo son referencia espacial.',
+          'Preset de la guia: Ej 5. Los ejes blancos solo son referencia espacial.',
         ]}
       />
 

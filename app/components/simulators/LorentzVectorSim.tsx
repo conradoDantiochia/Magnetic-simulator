@@ -25,29 +25,9 @@ interface LorentzPreset {
 
 const EXERCISE_PRESETS: LorentzPreset[] = [
   {
-    name: 'Ej 2',
-    note: 'Con el electron moviendose en +x y la desviacion en +y, el campo magnetico debe apuntar en +z.',
-    values: { q: -1, vx: 8e5, vy: 0, vz: 0, Bx: 0, By: 0, Bz: 2e-5, Ex: 0, Ey: 0, Ez: 0 },
-  },
-  {
     name: 'Ej 3',
     note: 'Particula alfa: v al norte (+y), B al este (+x). Debe dar F = -1.216e-13 k N y |F| = 1.216e-13 N.',
     values: { q: 2, vx: 0, vy: 3.8e5, vz: 0, Bx: 1.0, By: 0, Bz: 0, Ex: 0, Ey: 0, Ez: 0 },
-  },
-  {
-    name: 'Ej 4',
-    note: 'Electron en B = (4i - 11j) T y v = (-2i + 3j - 7k) m/s. Debe dar F = (1.232e-17 i + 4.48e-18 j - 1.60e-18 k) N.',
-    values: { q: -1, vx: -2, vy: 3, vz: -7, Bx: 4, By: -11, Bz: 0, Ex: 0, Ey: 0, Ez: 0 },
-  },
-  {
-    name: 'Ej 5',
-    note: 'Proton hacia el oeste (-x) en un campo terrestre hacia el sur (-y). La fuerza queda en +z y su modulo es 4.96e-17 N.',
-    values: { q: 1, vx: -6.2e6, vy: 0, vz: 0, Bx: 0, By: -0.5e-4, Bz: 0, Ex: 0, Ey: 0, Ez: 0 },
-  },
-  {
-    name: 'Ej 6',
-    note: 'Con q = 3.2e-19 C = 2e, debe dar F = (3.52e-18 i - 1.60e-18 j + 0k) N y un angulo XY de -24.44 deg.',
-    values: { q: 2, vx: 2, vy: 3, vz: -1, Bx: 2, By: 4, Bz: 1, Ex: 4, Ey: -1, Ez: -2 },
   },
 ]
 
@@ -74,7 +54,7 @@ const GUIDED_PRESETS: LorentzPreset[] = [
   },
 ]
 
-const DEFAULT_NOTE = 'Usa los botones Ej 2 a Ej 6 para cargar directamente los problemas vectoriales de la guia.'
+const DEFAULT_NOTE = 'Usa el boton Ej 3 para cargar directamente el problema vectorial de la guia.'
 
 function toSexagesimal(angle: number) {
   const sign = angle < 0 ? '-' : ''
